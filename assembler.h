@@ -6,11 +6,12 @@
 
 enum cpu_error_names
 {
-    ERR_CPU_BAD_FILE  = -9,
-    ERR_CPU_BAD_PTR   = -8,
-    ERR_CPU_BAD_READ  = -7,
-    ERR_CPU_IMP_OPER  = -6,
-    ERR_CPU_DIV_ZERO  = -5
+    ERR_ASM_BAD_FILE     = -9,
+    ERR_ASM_BAD_PTR      = -8,
+    ERR_ASM_BAD_READ     = -7,
+    ERR_ASM_IMP_OPER     = -6,
+    ERR_ASM_DIV_ZERO     = -5,
+    ERR_ASM_UNKNOWN_OPER = -4,
 };
 
 static const double epsilon = 0.00001;

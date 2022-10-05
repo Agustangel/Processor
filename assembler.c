@@ -17,6 +17,7 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
     elem_t subtraction = 0;
     elem_t multiplication = 0;
     elem_t division = 0;
+    elem_t out = 0;
 
     for(int idx = 0; idx < number_strings; ++idx)
     {
@@ -39,7 +40,7 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_ASM_IMP_OPER);
             }
             addition = stack_pop(stack) + stack_pop(stack);
             stack_push(stack, addition);
@@ -49,7 +50,7 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_ASM_IMP_OPER);
             }
             subtraction = -(stack_pop(stack) - stack_pop(stack));
             stack_push(stack, subtraction);         
@@ -59,7 +60,7 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_ASM_IMP_OPER);
             }
             multiplication = stack_pop(stack) * stack_pop(stack);
             stack_push(stack, multiplication);         
@@ -69,7 +70,7 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_ASM_IMP_OPER);
             }
 
             elem_t rhs = stack_pop(stack);
@@ -77,15 +78,30 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
             if(is_zero(rhs))
             {
                 printf("ERROR: division by zero.\n");
-                exit(ERR_CPU_DIV_ZERO);
+                exit(ERR_ASM_DIV_ZERO);
             }
 
-            division = lhs / rhs; //проверка на ноль
+            division = lhs / rhs;
             stack_push(stack, division);         
         }
         else if(stricmp(cmd, "out") == 0)
         {
-
+            if(stack->count < 1)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_ASM_IMP_OPER);  
+            }
+            out = stack_pop(stack);
+            printf("out = %d\n", out);
+        }
+        else if(stricmp(cmd, "hlt") == 0)
+        {
+            break;
+        }
+        else
+        {
+            printf("ERROR: unknown operator.\n");
+            exit(ERR_ASM_UNKNOWN_OPER);
         }
 
     }
@@ -133,15 +149,15 @@ int main()
     if (text == NULL)
     {
         printf("ERROR: bad file read.\n");
-        exit(ERR_CPU_BAD_FILE);
+        exit(ERR_ASM_BAD_FILE);
     }
 
     long count = count_symbols(text);
-    HANDLE_ERROR(count, ERR_CPU_BAD_PTR, "ERROR: pointer outside file.\n");
+    HANDLE_ERROR(count, ERR_ASM_BAD_PTR, "ERROR: pointer outside file.\n");
 
     char* buffer = (char*) calloc(count, sizeof(char));
     int ret = fill_buffer(text, buffer, count);
-    HANDLE_ERROR(ret, ERR_CPU_BAD_READ, "ERROR: file read error.\n");
+    HANDLE_ERROR(ret, ERR_ASM_BAD_READ, "ERROR: file read error.\n");
 
     fclose(text);
 
