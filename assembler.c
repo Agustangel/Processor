@@ -6,18 +6,19 @@
 #include <assert.h>
 #include <ctype.h>
 #include "assembler.h"
-// #include "../onegin/include/onegin.h"
-// #include "../stack/include/stack.h"
 
 
 //=========================================================================
-int calculate(stack_t* stack, struct string_t* strings, int number_strings)
+int calculate(struct string_t* strings, int number_strings)
 {
-    elem_t addition = 0;
-    elem_t subtraction = 0;
-    elem_t multiplication = 0;
-    elem_t division = 0;
-    elem_t out = 0;
+    FILE* out = fopen(binary.out, "w");
+    if (out == NULL)
+    {
+        printf("ERROR: bad file read.\n");
+        exit(ERR_ASM_BAD_FILE);
+    }
+
+    fprintf(out, "%p %d", CD, number_strings);
 
     for(int idx = 0; idx < number_strings; ++idx)
     {
@@ -33,7 +34,7 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
         {
             elem_t val = 0;
             sscanf(strings[idx].begin_string + n, " %d ", &val);
-            stack_push(stack, val);
+            fprintf(out, "%d %d", CMD_PUSH, val);
         }
         else if(stricmp(cmd, "add") == 0)
         {
@@ -42,8 +43,9 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_ASM_IMP_OPER);
             }
-            addition = stack_pop(stack) + stack_pop(stack);
-            stack_push(stack, addition);
+            fprintf(out, "%d", CMD_ADD);
+            // addition = stack_pop(stack) + stack_pop(stack);
+            // stack_push(stack, addition);
         }
         else if(stricmp(cmd, "sub") == 0)
         {
@@ -52,8 +54,9 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_ASM_IMP_OPER);
             }
-            subtraction = -(stack_pop(stack) - stack_pop(stack));
-            stack_push(stack, subtraction);         
+            fprintf(out, "%d", CMD_SUB);
+            // subtraction = -(stack_pop(stack) - stack_pop(stack));
+            // stack_push(stack, subtraction);         
         }
         else if(stricmp(cmd, "mul") == 0)
         {
@@ -62,8 +65,9 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_ASM_IMP_OPER);
             }
-            multiplication = stack_pop(stack) * stack_pop(stack);
-            stack_push(stack, multiplication);         
+            fprintf(out, "%d", CMD_MUL);
+            // multiplication = stack_pop(stack) * stack_pop(stack);
+            // stack_push(stack, multiplication);         
         }
         else if(stricmp(cmd, "div") == 0)
         {
@@ -73,16 +77,17 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
                 exit(ERR_ASM_IMP_OPER);
             }
 
-            elem_t rhs = stack_pop(stack);
-            elem_t lhs = stack_pop(stack);
-            if(is_zero(rhs))
-            {
-                printf("ERROR: division by zero.\n");
-                exit(ERR_ASM_DIV_ZERO);
-            }
+            fprintf(out, "%d", CMD_DIV);
+            // elem_t rhs = stack_pop(stack);
+            // elem_t lhs = stack_pop(stack);
+            // if(is_zero(rhs))
+            // {
+            //     printf("ERROR: division by zero.\n");
+            //     exit(ERR_ASM_DIV_ZERO);
+            // }
 
-            division = lhs / rhs;
-            stack_push(stack, division);         
+            // division = lhs / rhs;
+            // stack_push(stack, division);         
         }
         else if(stricmp(cmd, "out") == 0)
         {
@@ -91,11 +96,13 @@ int calculate(stack_t* stack, struct string_t* strings, int number_strings)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_ASM_IMP_OPER);  
             }
-            out = stack_pop(stack);
-            printf("out = %d\n", out);
+            fprintf(out, "%d", CMD_OUT);
+            // out = stack_pop(stack);
+            // printf("out = %d\n", out);
         }
         else if(stricmp(cmd, "hlt") == 0)
         {
+            fprintf(out, "%d", CMD_HLT);
             break;
         }
         else
@@ -145,7 +152,7 @@ int main()
     int init_size = 4;
     stack_init(&stack, init_size);
 
-    FILE* text = open_file("calculator.txt");
+    FILE* text = open_file("initial.s");
     if (text == NULL)
     {
         printf("ERROR: bad file read.\n");
