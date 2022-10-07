@@ -11,7 +11,7 @@
 //=========================================================================
 int calculate(struct string_t* strings, int number_strings)
 {
-    FILE* out = fopen(binary.out, "w");
+    FILE* out = fopen("binary.out", "w");
     if (out == NULL)
     {
         printf("ERROR: bad file read.\n");
@@ -38,67 +38,23 @@ int calculate(struct string_t* strings, int number_strings)
         }
         else if(stricmp(cmd, "add") == 0)
         {
-            if(stack->count < 2)
-            {
-                printf("ERROR: impossible operation.\n");
-                exit(ERR_ASM_IMP_OPER);
-            }
             fprintf(out, "%d", CMD_ADD);
-            // addition = stack_pop(stack) + stack_pop(stack);
-            // stack_push(stack, addition);
         }
         else if(stricmp(cmd, "sub") == 0)
         {
-            if(stack->count < 2)
-            {
-                printf("ERROR: impossible operation.\n");
-                exit(ERR_ASM_IMP_OPER);
-            }
-            fprintf(out, "%d", CMD_SUB);
-            // subtraction = -(stack_pop(stack) - stack_pop(stack));
-            // stack_push(stack, subtraction);         
+            fprintf(out, "%d", CMD_SUB);       
         }
         else if(stricmp(cmd, "mul") == 0)
         {
-            if(stack->count < 2)
-            {
-                printf("ERROR: impossible operation.\n");
-                exit(ERR_ASM_IMP_OPER);
-            }
-            fprintf(out, "%d", CMD_MUL);
-            // multiplication = stack_pop(stack) * stack_pop(stack);
-            // stack_push(stack, multiplication);         
+            fprintf(out, "%d", CMD_MUL);         
         }
         else if(stricmp(cmd, "div") == 0)
         {
-            if(stack->count < 2)
-            {
-                printf("ERROR: impossible operation.\n");
-                exit(ERR_ASM_IMP_OPER);
-            }
-
-            fprintf(out, "%d", CMD_DIV);
-            // elem_t rhs = stack_pop(stack);
-            // elem_t lhs = stack_pop(stack);
-            // if(is_zero(rhs))
-            // {
-            //     printf("ERROR: division by zero.\n");
-            //     exit(ERR_ASM_DIV_ZERO);
-            // }
-
-            // division = lhs / rhs;
-            // stack_push(stack, division);         
+            fprintf(out, "%d", CMD_DIV);        
         }
         else if(stricmp(cmd, "out") == 0)
         {
-            if(stack->count < 1)
-            {
-                printf("ERROR: impossible operation.\n");
-                exit(ERR_ASM_IMP_OPER);  
-            }
             fprintf(out, "%d", CMD_OUT);
-            // out = stack_pop(stack);
-            // printf("out = %d\n", out);
         }
         else if(stricmp(cmd, "hlt") == 0)
         {
@@ -110,7 +66,6 @@ int calculate(struct string_t* strings, int number_strings)
             printf("ERROR: unknown operator.\n");
             exit(ERR_ASM_UNKNOWN_OPER);
         }
-
     }
 
     return 0;
@@ -148,10 +103,6 @@ int main()
     logger_init(1, "asm.log");
     logger_set_level(INFO);
 
-    stack_t stack;
-    int init_size = 4;
-    stack_init(&stack, init_size);
-
     FILE* text = open_file("initial.s");
     if (text == NULL)
     {
@@ -173,9 +124,6 @@ int main()
 
 
     // TODO function calculate there
-
-    stack_dump(&stack);
-    stack_destroy(&stack);
 
     logger_finalize(file);
 

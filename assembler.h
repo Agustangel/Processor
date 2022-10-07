@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../onegin/include/onegin.h"
-#include "../stack/include/stack.h"
+#include "onegin/include/onegin.h"
+#include "stack/include/stack.h"
 
 
 enum asm_error_names
@@ -26,7 +26,7 @@ enum asm_commands
 };
 
 static const double epsilon = 0.00001;
-const unsigned int CP = 0xABADBABE;
+static const unsigned int CP = 0xABADBABE;
 
 int calculate(stack_t* stack, struct string_t* strings, int number_strings);
 int is_zero(double comparison);
