@@ -1,7 +1,7 @@
 #pragma once
 
-#include "onegin/include/onegin.h"
-#include "stack/include/stack.h"
+#include <onegin.h>
+#include <stack.h>
 
 
 enum asm_error_names
@@ -22,12 +22,21 @@ enum asm_commands
     CMD_MUL  = 4,
     CMD_DIV  = 5,
     CMD_OUT  = 6,
-    CMD_HLT  = 7
+    CMD_HLT  = 7,
+    CMD_DUP  = 8,
+    CMD_JMP  = 9
 };
 
-static const double epsilon = 0.00001;
+typedef struct label_t
+{
+    char* name;
+    int value;
+}label_t;
+
+#define max_size 100
 static const unsigned int CP = 0xABADBABE;
 
-int calculate(stack_t* stack, struct string_t* strings, int number_strings);
-int is_zero(double comparison);
+int compile(struct string_t* strings, int number_strings, label_t* labelo, int number_labels, int fill_labels);
 int count_whitespace(struct string_t str, int count);
+int count_labels(struct string_t* strings, int number_strings);
+int label_exist(label_t* labels, int number_label, char* cmd);

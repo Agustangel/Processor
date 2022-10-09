@@ -1,9 +1,10 @@
-push 10
-push 20
-add
 push 1
-push 2
-add
-div
+next:
+dup 
+dup
+mul
 out
+push 1
+add
+jmp next
 hlt
