@@ -157,6 +157,8 @@ int main()
 
     fclose(binary_file);
 
+    regs_t* regs = (regs_t*) calloc(count_regs, sizeof(regs_t));
+    
     int new_count = remove_whitespace(buffer, count);
     int* code = (int*) realloc(buffer, new_count * sizeof(int));
     free(buffer);

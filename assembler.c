@@ -11,19 +11,19 @@
 //=========================================================================
 int compile(struct string_t* strings, int number_strings, label_t* labels, int number_labels, int fill_labels)
 {
-    FILE* out = fopen("binary.out", "w");
-    if (out == NULL)
-    {
-        printf("ERROR: bad file read.\n");
-        exit(ERR_ASM_BAD_FILE);
-    }
+    int ip = 0;
+    int* code = (int*) calloc(number_strings * 2, sizeof(int));
 
-    fprintf(out, "%d %d", CP, number_strings);
+    code[ip++] = CP;
+    code[ip++] = number_strings;
 
-    char cmd[max_size];
+    char cmd  [max_size];
     char label[max_size];
+
     int count_label = 0;
-    int count = 0; // number of symbols read
+    int count = 0;         // number of symbols read
+    int white_symbols = 0; // number of whitespace symbols
+    int n = 0;             // n = count + white_symbols
 
     for(int idx = 0; idx < number_strings; ++idx)
     {
@@ -32,36 +32,32 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //
             printf("IDX = %d; cmd = %s\n", idx, cmd);
 
-            int white_symbols = count_whitespace(strings[idx], count);
-            int n = count + white_symbols;
-
             if(strcmp(cmd, "push") == 0)
             {
-                char str[max_size];
-                int val = 0;
-                sscanf(strings[idx].begin_string + n, "%s", str);
- 
-                val = atoi(str);
-                fprintf(out, "%d%d", CMD_PUSH, val);
+                code[ip++] = CMD_PUSH;
+                get_args(cmd, code, &ip);
             }
             else if(strcmp(cmd, "add") == 0)
             {
-                fprintf(out, "%d", CMD_ADD);
+                code[ip++] = CMD_ADD;
             }
             else if(strcmp(cmd, "sub") == 0)
             {
-                fprintf(out, "%d", CMD_SUB);       
+                code[ip++] = CMD_SUB;       
             }
             else if(strcmp(cmd, "mul") == 0)
             {
-                fprintf(out, "%d", CMD_MUL);         
+                code[ip++] = CMD_MUL;         
             }
             else if(strcmp(cmd, "div") == 0)
             {
-                fprintf(out, "%d", CMD_DIV);        
+                code[ip++] = CMD_DIV;        
             }
             else if(strcmp(cmd, "jmp") == 0)
             {
+                white_symbols = count_whitespace(strings[idx], count);
+                n = count + white_symbols;
+
                 char str[max_size];
                 int val = 0;
                 sscanf(strings[idx].begin_string + n, "%s", str);
@@ -73,19 +69,19 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
                         val = labels[idx].value;
                     }
                 }
-                fprintf(out, "%d%d", CMD_JMP, val);                
+                fprintf(out, "%d %d ", CMD_JMP, val);                
             }
             else if(strcmp(cmd, "dup") == 0)
             {
-                fprintf(out, "%d%d", CMD_DUP, CMD_DUP);
+                code[ip++] = CMD_DUP;
             }
             else if(strcmp(cmd, "out") == 0)
             {
-                fprintf(out, "%d", CMD_OUT);
+                code[ip++] = CMD_OUT;
             }
             else if(strcmp(cmd, "hlt") == 0)
             {
-                fprintf(out, "%d", CMD_HLT);
+                code[ip++] = CMD_HLT;
                 break;
             }
             else
@@ -128,9 +124,132 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             ++count_label;
         }
     }
-    fclose(out);
+
+    if(fill_labels)
+    {
+        FILE* out = fopen("binary.out", "w");
+        if (out == NULL)
+        {
+            printf("ERROR: bad file read.\n");
+            exit(ERR_ASM_BAD_FILE);
+        }
+
+        fclose(out);
+    }
 
     return 0;
+}
+
+//=========================================================================
+//TODO реализовать следующий случай: push [rax + 10]
+int get_args(struct string_t string, int* code, int* ip)
+{
+    int count = 0; // number of symbols read
+    int len = 0;   // len of string read
+    int val = 0;
+    
+    char cmd[max_size];
+    char str[max_size];
+
+    sscanf(string.begin_string, "%s%n", cmd, &count);
+
+    int white_symbols = count_whitespace(str, count);
+    int n = count + white_symbols;
+
+    if(strcmp(cmd, "push") == 0)
+    {
+        if(sscanf(string.begin_string + n, "%d", val))
+        {
+            code[ip++] = ARG_IMMED;
+            code[ip++] = val;
+        }
+        else
+        {
+            sscanf(string.begin_string + n, "%s", str);
+            len = strlen(str);
+
+            if((str[0] == 'r') && (len == 3))
+            {
+                if(strcmp(cmd, "rax")
+                {
+                    code[ip++] = ARG_REG;
+                    code[ip++] = REG_RAX;
+                }
+                else if(strcmp(cmd, "rbx"))
+                {
+                    code[ip++] = ARG_REG;
+                    code[ip++] = REG_RBX;
+                }
+                else if(strcmp(cmd, "rcx"))
+                {
+                    code[ip++] = ARG_REG;
+                    code[ip++] = REG_RCX;
+                }
+                else if(strcmp(cmd, "rdx"))
+                {
+                    code[ip++] = ARG_REG;
+                    code[ip++] = REG_RDX;
+                }
+                else
+                {
+                    printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+                    exit(ERR_ASM_UNKNOWN_ARG);                      
+                }
+            }
+            else if((str[0] == '[') && (str[len - 1] == ']'))
+            {
+                code[ip++] = ARG_RAM;
+
+                if(sscanf(string.begin_string + n + 1, "%d", val))
+                {
+                    code[ip++] = ARG_IMMED;
+                    code[ip++] = val;
+                }
+                else if((str[0] == 'r') && (len == 3))
+                {
+                    if(strcmp(cmd, "rax")
+                    {
+                        code[ip++] = ARG_REG;
+                        code[ip++] = REG_RAX;
+                    }
+                    else if(strcmp(cmd, "rbx"))
+                    {
+                        code[ip++] = ARG_REG;
+                        code[ip++] = REG_RBX;
+                    }
+                    else if(strcmp(cmd, "rcx"))
+                    {
+                        code[ip++] = ARG_REG;
+                        code[ip++] = REG_RCX;
+                    }
+                    else if(strcmp(cmd, "rdx"))
+                    {
+                        code[ip++] = ARG_REG;
+                        code[ip++] = REG_RDX;
+                    }
+                    else
+                    {
+                        printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+                        exit(ERR_ASM_UNKNOWN_ARG);                      
+                    }
+                }
+                else
+                {
+                    printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+                    exit(ERR_ASM_UNKNOWN_ARG);                      
+                }
+            }
+            else
+            {
+                printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+                exit(ERR_ASM_UNKNOWN_ARG);                 
+            }      
+        }
+    }
+    else if(strcmp(cmd, "jmp") == 0)
+    {
+
+    }
 }
 
 //=========================================================================
