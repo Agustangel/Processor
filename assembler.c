@@ -9,6 +9,7 @@
 
 
 //=========================================================================
+
 int compile(struct string_t* strings, int number_strings, label_t* labels, int number_labels, int fill_labels)
 {
     int ip = 0;
@@ -35,7 +36,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             if(strcmp(cmd, "push") == 0)
             {
                 code[ip++] = CMD_PUSH;
-                get_args(cmd, code, &ip);
+                get_args(strings[idx], code, ip, labels, number_labels);
             }
             else if(strcmp(cmd, "add") == 0)
             {
@@ -55,21 +56,8 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             }
             else if(strcmp(cmd, "jmp") == 0)
             {
-                white_symbols = count_whitespace(strings[idx], count);
-                n = count + white_symbols;
-
-                char str[max_size];
-                int val = 0;
-                sscanf(strings[idx].begin_string + n, "%s", str);
-                
-                for(int idx = 0; idx < number_labels; ++idx)
-                {
-                    if(strcmp(str, labels[idx].name))
-                    {
-                        val = labels[idx].value;
-                    }
-                }
-                fprintf(out, "%d %d ", CMD_JMP, val);                
+                code[ip++] = CMD_JMP;
+                get_args(strings[idx], code, ip, labels, number_labels);           
             }
             else if(strcmp(cmd, "dup") == 0)
             {
@@ -133,7 +121,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             printf("ERROR: bad file read.\n");
             exit(ERR_ASM_BAD_FILE);
         }
-
+        fwrite(code, sizeof(int), number_strings * 2, out);
         fclose(out);
     }
 
@@ -142,23 +130,24 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
 
 //=========================================================================
 //TODO реализовать следующий случай: push [rax + 10]
-int get_args(struct string_t string, int* code, int* ip)
+int get_args(struct string_t string, int* code, int idx, label_t* labels, int number_labels)
 {
     int count = 0; // number of symbols read
     int len = 0;   // len of string read
     int val = 0;
+    int ip = idx;
     
     char cmd[max_size];
     char str[max_size];
 
     sscanf(string.begin_string, "%s%n", cmd, &count);
 
-    int white_symbols = count_whitespace(str, count);
+    int white_symbols = count_whitespace(string, count);
     int n = count + white_symbols;
 
     if(strcmp(cmd, "push") == 0)
     {
-        if(sscanf(string.begin_string + n, "%d", val))
+        if(sscanf(string.begin_string + n, "%d", &val))
         {
             code[ip++] = ARG_IMMED;
             code[ip++] = val;
@@ -170,7 +159,7 @@ int get_args(struct string_t string, int* code, int* ip)
 
             if((str[0] == 'r') && (len == 3))
             {
-                if(strcmp(cmd, "rax")
+                if(strcmp(cmd, "rax") == 0)
                 {
                     code[ip++] = ARG_REG;
                     code[ip++] = REG_RAX;
@@ -200,14 +189,14 @@ int get_args(struct string_t string, int* code, int* ip)
             {
                 code[ip++] = ARG_RAM;
 
-                if(sscanf(string.begin_string + n + 1, "%d", val))
+                if(sscanf(string.begin_string + n + 1, "%d", &val))
                 {
                     code[ip++] = ARG_IMMED;
                     code[ip++] = val;
                 }
                 else if((str[0] == 'r') && (len == 3))
                 {
-                    if(strcmp(cmd, "rax")
+                    if(strcmp(cmd, "rax") == 0)
                     {
                         code[ip++] = ARG_REG;
                         code[ip++] = REG_RAX;
@@ -248,7 +237,16 @@ int get_args(struct string_t string, int* code, int* ip)
     }
     else if(strcmp(cmd, "jmp") == 0)
     {
-
+        sscanf(string.begin_string + n, "%s", str);
+                
+        for(int idx = 0; idx < number_labels; ++idx)
+        {
+            if(strcmp(str, labels[idx].name))
+            {
+                val = labels[idx].value;
+                code[ip++] = val;
+            }
+        }
     }
 }
 
@@ -274,7 +272,7 @@ int count_whitespace(struct string_t str, int count)
     int white_symbols = 0;
 
     char* ptr_current_position = str.begin_string + count;
-    while(isalpha(*ptr_current_position) == 0)
+    while(isalnum(*ptr_current_position) == 0)
     {
         ++ptr_current_position;
         ++white_symbols;

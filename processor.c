@@ -10,7 +10,7 @@
 
 //=========================================================================
 
-int processor(stack_t* stack, int* code, int new_count)
+int run(stack_t* stack, int* code, int new_count)
 {
     int addition = 0;
     int subtraction = 0;
@@ -138,7 +138,7 @@ int main()
     logger_set_level(INFO);
 
     stack_t stack;
-    int init_size = 4;
+    int init_size = 10;
     stack_init(&stack, init_size);
     
     FILE* binary_file = fopen("binary.out", "r");

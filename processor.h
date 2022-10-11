@@ -14,5 +14,5 @@ enum cpu_error_names
     ERR_CPU_BAD_SIGNATURE = -3
 };
 
-
+int run(stack_t* stack, int* code, int new_count);
 int remove_whitespace(int* buffer, long count);

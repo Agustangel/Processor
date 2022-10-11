@@ -65,3 +65,4 @@ int compile(struct string_t* strings, int number_strings, label_t* labelo, int n
 int count_whitespace(struct string_t str, int count);
 int count_labels(struct string_t* strings, int number_strings);
 int label_exist(label_t* labels, int number_label, char* cmd);
+int get_args(struct string_t string, int* code, int idx, label_t* labels, int number_labels);
