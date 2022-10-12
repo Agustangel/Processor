@@ -24,13 +24,14 @@ int run(stack_t* stack, int* code, int new_count)
         exit(ERR_CPU_BAD_SIGNATURE);
     }
     
-    for(int ip = 2; ip < new_count; ++ip)
+    int ip = 2;
+    while(ip < new_count)
     {
-        switch (code[ip])
+        switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
-            stack_push(stack, code[ip + 1]);
-            ip += 2;
+            stack_push(stack, get_arg(code, &ip));
+            ++ip;
             break;
 
         case CMD_ADD:
@@ -42,7 +43,7 @@ int run(stack_t* stack, int* code, int new_count)
 
             addition = stack_pop(stack) + stack_pop(stack);
             stack_push(stack, addition);
-            ip += 1;
+            ++ip;
             break;
 
         case CMD_SUB:
@@ -54,7 +55,7 @@ int run(stack_t* stack, int* code, int new_count)
 
             subtraction = -(stack_pop(stack) - stack_pop(stack));
             stack_push(stack, subtraction);
-            ip += 1;
+            ++ip;
             break;
 
         case CMD_MUL:
@@ -66,7 +67,7 @@ int run(stack_t* stack, int* code, int new_count)
 
             multiplication = stack_pop(stack) * stack_pop(stack);
             stack_push(stack, multiplication);
-            ip += 1;
+            ++ip;
             break;
 
         case CMD_DIV:
@@ -86,7 +87,7 @@ int run(stack_t* stack, int* code, int new_count)
 
             division = lhs / rhs;
             stack_push(stack, division); 
-            ip += 1;
+            ++ip;
             break;
 
         case CMD_OUT:
@@ -98,8 +99,11 @@ int run(stack_t* stack, int* code, int new_count)
 
             out = stack_pop(stack);
             printf("out = %d\n", out);
-            ip += 1;
+            ++ip;
             break;
+
+        case CMD_JMP:
+            ip = get_arg(code, &ip) + 2; // transition cell number, taking into account the signature
 
         case CMD_HLT:
             //stop calculate
@@ -115,19 +119,49 @@ int run(stack_t* stack, int* code, int new_count)
 
 //=========================================================================
 
+int get_arg(int* code, int* ip)
+{
+    int cmd = code[(*ip)++];
+    int arg = 0;
+
+    if(cmd == CMD_PUSH)
+    {
+        if(cmd & ARG_IMMED)
+        {
+            arg += code[*ip++];
+        }
+        if(cmd & ARG_REG)
+        {
+            arg += Regs[code[*ip]];
+        }
+        if(cmd & ARG_RAM)
+        {
+            arg = RAM[arg];
+        }
+    }
+    if(cmd == CMD_JMP)
+    {
+        arg = code[*ip];
+    }
+
+    return arg;
+}
+
+//=========================================================================
+
 int remove_whitespace(int* buffer, long count)
 {
     assert(buffer != NULL);
 
-    int new_idx = 0;
+    int new_count = 0;
     for(int idx = 0; idx < count; ++idx)
     {
         if(isdigit(buffer[idx]))
         {
-            ++new_idx;
+            ++new_count;
         }
     }
-    return new_idx;
+    return new_count;
 }
 
 //=========================================================================
