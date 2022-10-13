@@ -1,11 +1,16 @@
 #include <stdio.h>
 #include <logger.h>
+#include <onegin.h>
+#include <stack.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
 #include <ctype.h>
-#include "assembler.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include "cpu.h"
 
 
 //=========================================================================
@@ -16,7 +21,6 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
     int* code = (int*) calloc(number_strings * 2, sizeof(int));
 
     code[ip++] = CP;
-    code[ip++] = number_strings;
 
     char cmd  [max_size];
     char label[max_size];
@@ -82,7 +86,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
                 if(!label_exist(labels, number_labels, cmd))
                 {
                     printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-                    exit(ERR_ASM_UNKNOWN_OPER);
+                    exit(ERR_UNKNOWN_OPER);
                 }
             }
         }
@@ -100,14 +104,14 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             if(*(ptr_colon + 1) != '\0')
             {
                 printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-                exit(ERR_ASM_UNKNOWN_OPER);
+                exit(ERR_UNKNOWN_OPER);
             }
             while(tmp_ptr < ptr_colon)
             {
                 if(!isalnum(*tmp_ptr))
                 {
                     printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-                    exit(ERR_ASM_UNKNOWN_OPER);                    
+                    exit(ERR_UNKNOWN_OPER);                    
                 }
                 ++tmp_ptr;
             }
@@ -124,9 +128,15 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
         if (out == NULL)
         {
             printf("ERROR: bad file read.\n");
-            exit(ERR_ASM_BAD_FILE);
+            exit(ERR_BAD_FILE);
         }
         fwrite(code, sizeof(int), number_strings * 2, out);
+
+        struct stat buf;
+        stat("binary.out", &buf);
+        code[count_signature - 1] = buf.st_size;
+        version_system = buf.st_size;
+
         fclose(out);
     }
 
@@ -201,20 +211,20 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
                         else
                         {
                             printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-                            exit(ERR_ASM_UNKNOWN_ARG);                 
+                            exit(ERR_UNKNOWN_ARG);                 
                         } 
                     }
                 }
                 else
                 {
                     printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-                    exit(ERR_ASM_UNKNOWN_ARG);                      
+                    exit(ERR_UNKNOWN_ARG);                      
                 }
             }
             else
             {
                 printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-                exit(ERR_ASM_UNKNOWN_ARG);                 
+                exit(ERR_UNKNOWN_ARG);                 
             }      
         }
     }
@@ -243,7 +253,7 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
         else
         {
             printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-            exit(ERR_ASM_UNKNOWN_ARG);                 
+            exit(ERR_UNKNOWN_ARG);                 
         }      
     }
 }
@@ -283,7 +293,7 @@ void get_reg(char* str, int* code, int* ip)
     else
     {
         printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-        exit(ERR_ASM_UNKNOWN_ARG);                      
+        exit(ERR_UNKNOWN_ARG);                      
     }
 }
 
@@ -348,15 +358,15 @@ int main()
     if (text == NULL)
     {
         printf("ERROR: bad file read.\n");
-        exit(ERR_ASM_BAD_FILE);
+        exit(ERR_BAD_FILE);
     }
 
     long count = count_symbols(text);
-    HANDLE_ERROR(count, ERR_ASM_BAD_PTR, "ERROR: pointer outside file.\n");
+    HANDLE_ERROR(count, ERR_BAD_PTR, "ERROR: pointer outside file.\n");
 
     char* buffer = (char*) calloc(count, sizeof(char));
     int ret = fill_buffer(text, buffer, sizeof(char), count);
-    HANDLE_ERROR(ret, ERR_ASM_BAD_READ, "ERROR: file read error.\n");
+    HANDLE_ERROR(ret, ERR_BAD_READ, "ERROR: file read error.\n");
 
     fclose(text);
 

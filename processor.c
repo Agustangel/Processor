@@ -5,7 +5,8 @@
 #include <math.h>
 #include <assert.h>
 #include <ctype.h>
-#include "processor.h"
+#include <unistd.h>
+#include "cpu.h"
 
 
 //=========================================================================
@@ -23,7 +24,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
     int out = 0;
     
     int ret = check_signature(code);
-    HANDLE_ERROR(ret, ERR_CPU_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
+    HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
 
     int ip = count_signature;
     while(ip < new_count)
@@ -44,7 +45,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_IMP_OPER);
             }
 
             addition = stack_pop(stack) + stack_pop(stack);
@@ -56,7 +57,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_IMP_OPER);
             }
 
             subtraction = -(stack_pop(stack) - stack_pop(stack));
@@ -68,7 +69,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_IMP_OPER);
             }
 
             multiplication = stack_pop(stack) * stack_pop(stack);
@@ -80,7 +81,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);
+                exit(ERR_IMP_OPER);
             }
 
             int rhs = stack_pop(stack);
@@ -88,7 +89,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(rhs == 0)
             {
                 printf("ERROR: division by zero.\n");
-                exit(ERR_CPU_DIV_ZERO);
+                exit(ERR_DIV_ZERO);
             }
 
             division = lhs / rhs;
@@ -100,7 +101,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 1)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_CPU_IMP_OPER);  
+                exit(ERR_IMP_OPER);  
             }
 
             out = stack_pop(stack);
@@ -109,7 +110,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             break;
 
         case CMD_JMP:
-            ip = get_arg(code, &ip, Regs) + 2; // transition cell number, taking into account the signature
+            ip = eval(code, &ip, Regs) + 2; // transition cell number, taking into account the signature
             break;
 
         case CMD_HLT:
@@ -117,7 +118,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
 
         default:
             printf("ERROR: unknown operator.\n");
-            exit(ERR_CPU_UNKNOWN_OPER);
+            exit(ERR_UNKNOWN_OPER);
             break;
         }
     }
@@ -133,16 +134,19 @@ int check_signature(int* code)
 
     if(code[0] != CP)
     {
-        return ERR_CPU_BAD_SIGNATURE;
+        return ERR_BAD_SIGNATURE;
     }
-    // if(code[1] != );
+    if(code[1] != version_system)
+    {
+        return ERR_BAD_VERSION;
+    }
 
     return 0;
 }
 
 //=========================================================================
 
-int get_arg(int* code, int* ip, regs_t* Regs)
+int eval(int* code, int* ip, regs_t* Regs)
 {
     assert(code != NULL);
     assert(ip != NULL);
@@ -211,7 +215,7 @@ void regs_init(regs_t* Regs)
 
 int main()
 {
-    logger_init(1, "asm.log");
+    logger_init(1, "cpu.log");
     logger_set_level(INFO);
 
     stack_t stack;
@@ -222,15 +226,15 @@ int main()
     if (binary_file == NULL)
     {
         printf("ERROR: bad file read.\n");
-        exit(ERR_CPU_BAD_FILE);
+        exit(ERR_BAD_FILE);
     }
 
     long count = count_symbols(binary_file);
-    HANDLE_ERROR(count, ERR_CPU_BAD_PTR, "ERROR: pointer outside file.\n");
+    HANDLE_ERROR(count, ERR_BAD_PTR, "ERROR: pointer outside file.\n");
 
-    int* buffer = (int*) calloc(count, sizeof(int));
-    int ret = fill_buffer(binary_file, buffer, sizeof(int), count);
-    HANDLE_ERROR(ret, ERR_CPU_BAD_READ, "ERROR: file read error.\n");
+    char* buffer = (char*) calloc(count, sizeof(char));
+    int ret = fill_buffer(binary_file, buffer, sizeof(char), count);
+    HANDLE_ERROR(ret, ERR_BAD_READ, "ERROR: file read error.\n");
 
     fclose(binary_file);
 
@@ -238,7 +242,7 @@ int main()
     regs_init(Regs);
     
     int new_count = remove_whitespace(buffer, count);
-    int* code = (int*) realloc(buffer, new_count * sizeof(int));
+    char* code = (char*) realloc(buffer, new_count * sizeof(char));
     free(buffer);
 
     run(&stack, code, new_count, Regs);
