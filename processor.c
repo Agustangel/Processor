@@ -10,27 +10,33 @@
 
 //=========================================================================
 
-int run(stack_t* stack, int* code, int new_count)
+int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
 {
+    assert(stack != NULL);
+    assert(code != NULL);
+    assert(Regs != NULL);    
+
     int addition = 0;
     int subtraction = 0;
     int multiplication = 0;
     int division = 0;
     int out = 0;
-
-    if(code[0] != CP)
-    {
-        printf("ERROR: incorrect signature");
-        exit(ERR_CPU_BAD_SIGNATURE);
-    }
     
-    int ip = 2;
+    int ret = check_signature(code);
+    HANDLE_ERROR(ret, ERR_CPU_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
+
+    int ip = count_signature;
     while(ip < new_count)
     {
         switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
-            stack_push(stack, get_arg(code, &ip));
+            stack_push(stack, get_arg(code, &ip, Regs));
+            ++ip;
+            break;
+
+        case CMD_POP:
+            Regs[get_arg(code, &ip, Regs) - 1].value = stack_pop(stack);
             ++ip;
             break;
 
@@ -79,7 +85,7 @@ int run(stack_t* stack, int* code, int new_count)
 
             int rhs = stack_pop(stack);
             int lhs = stack_pop(stack);
-            if(is_zero(rhs))
+            if(rhs == 0)
             {
                 printf("ERROR: division by zero.\n");
                 exit(ERR_CPU_DIV_ZERO);
@@ -103,10 +109,11 @@ int run(stack_t* stack, int* code, int new_count)
             break;
 
         case CMD_JMP:
-            ip = get_arg(code, &ip) + 2; // transition cell number, taking into account the signature
+            ip = get_arg(code, &ip, Regs) + 2; // transition cell number, taking into account the signature
+            break;
 
         case CMD_HLT:
-            //stop calculate
+            exit(EXIT_SUCCESS);
 
         default:
             printf("ERROR: unknown operator.\n");
@@ -114,13 +121,32 @@ int run(stack_t* stack, int* code, int new_count)
             break;
         }
     }
+    
     return 0;
 }
 
 //=========================================================================
 
-int get_arg(int* code, int* ip)
+int check_signature(int* code)
 {
+    assert(code != NULL);
+
+    if(code[0] != CP)
+    {
+        return ERR_CPU_BAD_SIGNATURE;
+    }
+    // if(code[1] != );
+
+    return 0;
+}
+
+//=========================================================================
+
+int get_arg(int* code, int* ip, regs_t* Regs)
+{
+    assert(code != NULL);
+    assert(ip != NULL);
+
     int cmd = code[(*ip)++];
     int arg = 0;
 
@@ -132,7 +158,7 @@ int get_arg(int* code, int* ip)
         }
         if(cmd & ARG_REG)
         {
-            arg += Regs[code[*ip]];
+            arg += Regs[code[*ip] - 1].value;
         }
         if(cmd & ARG_RAM)
         {
@@ -140,6 +166,10 @@ int get_arg(int* code, int* ip)
         }
     }
     if(cmd == CMD_JMP)
+    {
+        arg = code[*ip];
+    }
+    if(cmd == CMD_POP)
     {
         arg = code[*ip];
     }
@@ -161,7 +191,20 @@ int remove_whitespace(int* buffer, long count)
             ++new_count;
         }
     }
+
     return new_count;
+}
+
+//=========================================================================
+
+void regs_init(regs_t* Regs)
+{
+    assert(Regs != NULL);
+
+    for(int idx = 0; idx < count_regs; ++idx)
+    {
+        Regs[idx].value = REG_POISON;
+    }
 }
 
 //=========================================================================
@@ -191,11 +234,14 @@ int main()
 
     fclose(binary_file);
 
-    regs_t* regs = (regs_t*) calloc(count_regs, sizeof(regs_t));
+    regs_t* Regs = (regs_t*) calloc(count_regs, sizeof(regs_t));
+    regs_init(Regs);
     
     int new_count = remove_whitespace(buffer, count);
     int* code = (int*) realloc(buffer, new_count * sizeof(int));
     free(buffer);
+
+    run(&stack, code, new_count, Regs);
 
     stack_dump(&stack);
     stack_destroy(&stack);

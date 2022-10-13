@@ -58,6 +58,7 @@ typedef struct regs_t
 
 
 #define max_size 100
+#define count_signature 2
 static const int CP = 0xABADBABE;
 static const int count_regs = 4;
 
