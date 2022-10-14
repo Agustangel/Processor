@@ -19,15 +19,17 @@ int decompile(int* code, int new_count)
     int ip = count_signature;
     while(ip < new_count)
     {
-        switch (code[ip])
+        switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
             fwrite("push ", sizeof(char), LEN_PUSH, out);
+            dis_eval(out, code, &ip, labels, number_labels);
             ++ip;
             break;
         
         case CMD_POP:
             fwrite("pop ", sizeof(char), LEN_POP, out);
+            dis_eval(out, code, &ip, labels, number_labels);
             ++ip;
             break;
 
@@ -53,6 +55,7 @@ int decompile(int* code, int new_count)
 
         case CMD_JMP:
             fwrite("jmp ", sizeof(char), LEN_JMP, out);
+            dis_eval(out, code, &ip, labels, number_labels);
             ++ip;
             break;
 
@@ -84,38 +87,62 @@ int decompile(int* code, int new_count)
 //TODO реализовать написание в файл имени метки, куда jmp
 void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels)
 {
-    if(code[*ip] == CMD_PUSH)
+    char cmd = code[*ip];
+    
+    if((cmd & CMD_MASK_1) == CMD_PUSH)
     {
-        ++(*ip);
+        int arg_1 = 0;
+        int arg_2 = 0;
 
-    }
-    else if(code[*ip] == CMD_POP)
-    {
-        ++(*ip);
-        switch (code[*ip])
+        if(cmd & ARG_RAM)
         {
-        case REG_RAX:
-            fwrite("rax\n", sizeof(char), LEN_REG, out);
-            break;
-        
-        case REG_RBX:
-            fwrite("rbx\n", sizeof(char), LEN_REG, out);
-            break;
+            ++(*ip);
+            if(cmd & ARG_IMMED)
+            {
+                if(cmd & ARG_REG)
+                {
 
-        case REG_RCX:
-            fwrite("rcx\n", sizeof(char), LEN_REG, out);
-            break;
+                }
+                fwrite("[" code[*ip] "]\n", sizeof(char), LEN_IMMED + 2, out);
 
-        case REG_RDX:
-            fwrite("rdx\n", sizeof(char), LEN_REG, out);
-            break;
+                return;                
+            }
+            if(cmd & ARG_REG)
+            {
+                if(cmd & ARG_IMMED)
+                {
 
-        default:
-            printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-            exit(ERR_UNKNOWN_ARG);  
+                }
+                fwrite("[", sizeof(char), 1, out);            
+                fwrite_reg(out, code, ip);
+                fwrite("]\n", sizeof(char), 2, out);
+
+                return;                
+            }
+        }
+        if(cmd & ARG_IMMED)
+        {
+            ++(*ip);
+            fwrite(code[*ip]"\n", sizeof(char), LEN_IMMED, out);
+
+            return;
+        }
+        if(cmd & ARG_REG)
+        {
+            ++(*ip);
+            fwrite_reg(out, code, ip);
+            fwrite("\n", sizeof(char), 1, out);     
+
+            return;
         }
     }
-    else if(code[*ip] == CMD_JMP)
+    else if((cmd & CMD_MASK_1) == CMD_POP)
+    {
+        ++(*ip);
+        fwrite_reg(out, code, ip);
+        fwrite("\n", sizeof(char), 1, out);
+    }
+    else if((cmd & CMD_MASK_1) == CMD_JMP)
     {
         ++(*ip);
         for(int idx = 0; idx < number_labels; ++idx)
@@ -123,12 +150,41 @@ void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels
             if(*ip == labels[idx].value)
             {
                 int len = srtlen(labels[idx].name);
-                fwrite(labels[idx].name ":\n", sizeof(char), len, out);
+                fwrite(labels[idx].value "\n", sizeof(char), 1, out);
 
+                // *ip - строка куда прыгать
                 return;
             }
         }
 
+        printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+        exit(ERR_UNKNOWN_ARG);  
+    }
+}
+
+//=========================================================================
+
+void fwrite_reg(FILE* out, char* code, int* ip)
+{
+    switch (code[*ip])
+    {
+    case REG_RAX:
+        fwrite("rax", sizeof(char), LEN_REG, out);
+        break;
+    
+    case REG_RBX:
+        fwrite("rbx", sizeof(char), LEN_REG, out);
+        break;
+
+    case REG_RCX:
+        fwrite("rcx", sizeof(char), LEN_REG, out);
+        break;
+
+    case REG_RDX:
+        fwrite("rdx", sizeof(char), LEN_REG, out);
+        break;
+
+    default:
         printf("LINE %d ERROR: unknown argument.\n", __LINE__);
         exit(ERR_UNKNOWN_ARG);  
     }

@@ -39,7 +39,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
 
             if(strcmp(cmd, "push") == 0)
             {
-                code[ip++] = CMD_PUSH;
+                code[ip] = CMD_PUSH;
                 get_args(strings[idx], code, &ip, labels, number_labels);
             }
             else if(strcmp(cmd, "pop") == 0)
