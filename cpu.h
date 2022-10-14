@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stack.h>
+
 
 enum error_names
 {
@@ -62,20 +64,6 @@ typedef struct regs_t
 }regs_t;
 
 
-#define LEN_PUSH  4
-#define LEN_POP   3
-#define LEN_ADD   3
-#define LEN_SUB   3
-#define LEN_MUL   3
-#define LEN_DIV   3
-#define LEN_JMP   3
-#define LEN_DUP   3
-#define LEN_OUT   3
-#define LEN_HLT   3
-#define LEN_REG   3
-#define LEN_IMMED 1
-
-
 #define REG_POISON -1
 #define max_size 100
 #define count_signature 2
@@ -99,10 +87,10 @@ void get_reg(char* str, int* code, int* ip);
 int run(stack_t* stack, int* code, int new_count, regs_t* Regs);
 int check_signature(int* code);
 int get_arg(int* code, int* ip, regs_t* Regs);
-int remove_whitespace(int* buffer, long count);
+int remove_whitespace(void* buffer, long count);
 int eval(int* code, int* ip, regs_t* Regs);
 
 //dasm
-int decompile(int* code, int new_count);
-void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels);
-void fwrite_reg(FILE* out, char* code, int* ip);
+int decompile(char* code, int new_count);
+void dis_eval(FILE* out, char* code, int* ip);
+void fprintf_reg(FILE* out, char* code, int* ip);

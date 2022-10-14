@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <logger.h>
+#include <onegin.h>
+#include <stack.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -183,7 +185,7 @@ int eval(int* code, int* ip, regs_t* Regs)
 
 //=========================================================================
 
-int remove_whitespace(int* buffer, long count)
+int remove_whitespace(void* buffer, long count)
 {
     assert(buffer != NULL);
 

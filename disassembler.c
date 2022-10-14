@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <logger.h>
 #include <onegin.h>
 #include "cpu.h"
@@ -7,7 +8,7 @@
 
 //=========================================================================
 
-int decompile(int* code, int new_count)
+int decompile(char* code, int new_count)
 {
     FILE* out = fopen("disasm.s", "w");
     if (out == NULL)
@@ -22,55 +23,55 @@ int decompile(int* code, int new_count)
         switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
-            fwrite("push ", sizeof(char), LEN_PUSH, out);
-            dis_eval(out, code, &ip, labels, number_labels);
+            fprintf(out, "push ");
+            dis_eval(out, code, &ip);
             ++ip;
             break;
         
         case CMD_POP:
-            fwrite("pop ", sizeof(char), LEN_POP, out);
-            dis_eval(out, code, &ip, labels, number_labels);
+            fprintf(out, "pop ");
+            dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_ADD:
-            fwrite("add\n", sizeof(char), LEN_ADD, out);
+            fprintf(out, "add\n");
             ++ip;
             break;
 
         case CMD_SUB:
-            fwrite("sub\n", sizeof(char), LEN_SUB, out);
+            fprintf(out, "sub\n");
             ++ip;
             break;
 
         case CMD_MUL:
-            fwrite("mul\n", sizeof(char), LEN_MUL, out);
+            fprintf(out, "mul\n");
             ++ip;
             break;
 
         case CMD_DIV:
-            fwrite("div\n", sizeof(char), LEN_DIV, out);
+            fprintf(out, "div\n");
             ++ip;
             break;
 
         case CMD_JMP:
-            fwrite("jmp ", sizeof(char), LEN_JMP, out);
-            dis_eval(out, code, &ip, labels, number_labels);
+            fprintf(out, "jmp ");
+            dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_DUP:
-            fwrite("dup\n", sizeof(char), LEN_DUP, out);
+            fprintf(out, "dup\n");
             ++ip;
             break;
 
         case CMD_OUT:
-            fwrite("out\n", sizeof(char), LEN_OUT, out);
+            fprintf(out, "out\n");
             ++ip;
             break;
 
         case CMD_HLT:
-            fwrite("hlt\n", sizeof(char), LEN_HLT, out);
+            fprintf(out, "hlt\n");
             ++ip;
             break;
 
@@ -85,7 +86,7 @@ int decompile(int* code, int new_count)
 
 //=========================================================================
 //TODO реализовать написание в файл имени метки, куда jmp
-void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels)
+void dis_eval(FILE* out, char* code, int* ip)
 {
     char cmd = code[*ip];
     
@@ -103,7 +104,7 @@ void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels
                 {
 
                 }
-                fwrite("[" code[*ip] "]\n", sizeof(char), LEN_IMMED + 2, out);
+                fprintf(out, "[%d]\n", code[*ip]);
 
                 return;                
             }
@@ -113,9 +114,9 @@ void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels
                 {
 
                 }
-                fwrite("[", sizeof(char), 1, out);            
-                fwrite_reg(out, code, ip);
-                fwrite("]\n", sizeof(char), 2, out);
+                fprintf(out, "[");            
+                fprintf_reg(out, code, ip);
+                fprintf(out, "]\n");
 
                 return;                
             }
@@ -123,15 +124,15 @@ void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels
         if(cmd & ARG_IMMED)
         {
             ++(*ip);
-            fwrite(code[*ip]"\n", sizeof(char), LEN_IMMED, out);
+            fprintf(out, "%d\n", code[*ip]);
 
             return;
         }
         if(cmd & ARG_REG)
         {
             ++(*ip);
-            fwrite_reg(out, code, ip);
-            fwrite("\n", sizeof(char), 1, out);     
+            fprintf_reg(out, code, ip);
+            fprintf(out, "\n");
 
             return;
         }
@@ -139,49 +140,41 @@ void dis_eval(FILE* out, char* code, int* ip, label_t* labels, int number_labels
     else if((cmd & CMD_MASK_1) == CMD_POP)
     {
         ++(*ip);
-        fwrite_reg(out, code, ip);
-        fwrite("\n", sizeof(char), 1, out);
+        fprintf_reg(out, code, ip);
+        fprintf(out, "\n");
     }
     else if((cmd & CMD_MASK_1) == CMD_JMP)
     {
         ++(*ip);
-        for(int idx = 0; idx < number_labels; ++idx)
-        {
-            if(*ip == labels[idx].value)
-            {
-                int len = srtlen(labels[idx].name);
-                fwrite(labels[idx].value "\n", sizeof(char), 1, out);
+        fprintf(out, "%d:\n", *ip);
 
-                // *ip - строка куда прыгать
-                return;
-            }
-        }
-
-        printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-        exit(ERR_UNKNOWN_ARG);  
+        return;
     }
+
+    printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+    exit(ERR_UNKNOWN_ARG);  
 }
 
 //=========================================================================
 
-void fwrite_reg(FILE* out, char* code, int* ip)
+void fprintf_reg(FILE* out, char* code, int* ip)
 {
     switch (code[*ip])
     {
     case REG_RAX:
-        fwrite("rax", sizeof(char), LEN_REG, out);
+        fprintf(out, "rax");
         break;
     
     case REG_RBX:
-        fwrite("rbx", sizeof(char), LEN_REG, out);
+        fprintf(out, "rbx");
         break;
 
     case REG_RCX:
-        fwrite("rcx", sizeof(char), LEN_REG, out);
+        fprintf(out, "rcx");
         break;
 
     case REG_RDX:
-        fwrite("rdx", sizeof(char), LEN_REG, out);
+        fprintf(out, "rdx");
         break;
 
     default:
@@ -217,7 +210,7 @@ int main()
     char* code = (char*) realloc(buffer, new_count * sizeof(char));
     free(buffer);
 
-
+    decompile(code, new_count);
 
     logger_finalize(file);
 
