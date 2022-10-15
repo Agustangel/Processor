@@ -13,7 +13,7 @@
 
 //=========================================================================
 
-int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
+int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
 {
     assert(stack != NULL);
     assert(code != NULL);
@@ -47,7 +47,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_IMP_OPER);
+                exit(ERR_BAD_OPER);
             }
 
             addition = stack_pop(stack) + stack_pop(stack);
@@ -59,7 +59,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_IMP_OPER);
+                exit(ERR_BAD_OPER);
             }
 
             subtraction = -(stack_pop(stack) - stack_pop(stack));
@@ -71,7 +71,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_IMP_OPER);
+                exit(ERR_BAD_OPER);
             }
 
             multiplication = stack_pop(stack) * stack_pop(stack);
@@ -83,7 +83,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 2)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_IMP_OPER);
+                exit(ERR_BAD_OPER);
             }
 
             int rhs = stack_pop(stack);
@@ -103,11 +103,24 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs)
             if(stack->count < 1)
             {
                 printf("ERROR: impossible operation.\n");
-                exit(ERR_IMP_OPER);  
+                exit(ERR_BAD_OPER);  
             }
 
             out = stack_pop(stack);
             printf("out = %d\n", out);
+            ++ip;
+            break;
+
+        case CMD_DUP:
+            if(stack->count < 1)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);  
+            }
+
+            out = stack_pop(stack);
+            stack_push(stack, out);
+            stack_push(stack, out);
             ++ip;
             break;
 
@@ -153,14 +166,19 @@ int eval(int* code, int* ip, regs_t* Regs)
     assert(code != NULL);
     assert(ip != NULL);
 
-    int cmd = code[(*ip)++];
+    int cmd = code[*ip];
     int arg = 0;
+    ++(*ip);
 
     if(cmd == CMD_PUSH)
     {
         if(cmd & ARG_IMMED)
         {
-            arg += code[*ip++];
+            arg += code[*ip];
+            if(cmd & ARG_REG)
+            {
+                ++(*ip);
+            }
         }
         if(cmd & ARG_REG)
         {
@@ -177,10 +195,135 @@ int eval(int* code, int* ip, regs_t* Regs)
     }
     if(cmd == CMD_POP)
     {
-        arg = code[*ip];
+        if((cmd & ARG_IMMED) && !(cmd & ARG_RAM))
+        {
+            LOG("LINE: %d. ERROR: incorrect argument. FUNCTION: %s\n", __LINE__, __PRETTY_FUNCTION__);
+            exit(ERR_BAD_ARG);
+        }
+        if(cmd & ARG_IMMED)
+        {
+            arg += code[*ip];
+            if(cmd & ARG_REG)
+            {
+                ++(*ip);
+            }
+        }
+        if(cmd & ARG_REG)
+        {
+            arg += Regs[code[*ip] - 1].value;
+        }
+        if(cmd & ARG_RAM)
+        {
+            arg = RAM[arg];
+        }
     }
 
     return arg;
+}
+
+//=========================================================================
+
+void cpu_dump(int* code, int new_count)
+{
+    char binary[8];
+    char bits[3];
+    int ip = count_signature;
+
+    while(ip < new_count)
+    {   
+        switch (code[ip] & CMD_MASK_1)
+        {
+        case CMD_PUSH:
+            bits = get_bits(code[ip]);
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (%s #1)\n", code[ip], code[ip], binary, bits);
+            ++ip;
+            break;
+
+        case CMD_POP:
+            bits = get_bits(code[ip]);
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (%s #2)\n", code[ip], code[ip], binary, bits);
+            ++ip;
+            break;
+
+        case CMD_ADD:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#3)\n", code[ip], code[ip], binary);
+            ++ip;
+            break;
+
+        case CMD_SUB:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#4)\n", code[ip], code[ip], binary);
+            ++ip;
+            break;
+
+        case CMD_MUL:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#5)\n", code[ip], code[ip], binary);
+            ++ip;
+            break;
+
+        case CMD_DIV:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#6)\n", code[ip], code[ip], binary);
+            ++ip;
+            break;
+
+        case CMD_OUT:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#7)\n", code[ip], code[ip], binary);
+            ++ip;
+            break;
+
+        case CMD_HLT:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#8)\n", code[ip], code[ip], binary);
+            break;
+
+        case CMD_DUP:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#9)\n", code[ip], code[ip], binary);
+            break;
+
+        case CMD_JMP:
+            binary = convert_binary[code[ip]];
+            LOG("%d %x %s (#10)\n", code[ip], code[ip], binary);
+            break;
+
+        default:
+            printf("ERROR: unknown operator.\n");
+            exit(ERR_UNKNOWN_OPER);
+            break;
+        }
+    }
+}
+
+//=========================================================================
+
+char* get_bits(char n)
+{
+    char bits[3];
+    bits[0] = (n & ARG_RAM)   ? 'M' : 'm';
+    bits[1] = (n & ARG_REG)   ? 'R' : 'r';
+    bits[2] = (n & ARG_IMMED) ? 'I' : 'i';
+
+    return bits;
+}
+
+//=========================================================================
+
+char* convert_binary(char n)
+{
+    char binary[8];
+    for (int i = 0; i < 8; ++i)
+    {
+        binary[i] = (n & 0x80) ? '1' : '0';
+        n <<= 1;
+    }
+
+    return binary;
 }
 
 //=========================================================================
@@ -247,10 +390,16 @@ int main()
     char* code = (char*) realloc(buffer, new_count * sizeof(char));
     free(buffer);
 
-    run(&stack, code, new_count, Regs);
+    char* RAM = (char*) malloc(RAM_SIZE * sizeof(char));
+
+    run(&stack, code, new_count, Regs, RAM);
 
     stack_dump(&stack);
     stack_destroy(&stack);
+
+    free(Regs);
+    free(code);
+    free(RAM);
 
     logger_finalize(file);
 

@@ -5,7 +5,7 @@
 #include "cpu.h"
 
 
-
+// TODO написать функцию dump для asm, cpu, dasm
 //=========================================================================
 
 int decompile(char* code, int new_count)
@@ -100,23 +100,14 @@ void dis_eval(FILE* out, char* code, int* ip)
             ++(*ip);
             if(cmd & ARG_IMMED)
             {
+                fprintf(out, "[%d ", code[*ip]);
                 if(cmd & ARG_REG)
                 {
-
+                    ++(*ip);
+                    fprintf(out, "+ ");
+                    fprintf_reg(out, code, ip);
+                    fprintf(out, "]\n");
                 }
-                fprintf(out, "[%d]\n", code[*ip]);
-
-                return;                
-            }
-            if(cmd & ARG_REG)
-            {
-                if(cmd & ARG_IMMED)
-                {
-
-                }
-                fprintf(out, "[");            
-                fprintf_reg(out, code, ip);
-                fprintf(out, "]\n");
 
                 return;                
             }
@@ -146,7 +137,7 @@ void dis_eval(FILE* out, char* code, int* ip)
     else if((cmd & CMD_MASK_1) == CMD_JMP)
     {
         ++(*ip);
-        fprintf(out, "%d:\n", *ip);
+        fprintf(out, "l_%d\n", *ip);
 
         return;
     }

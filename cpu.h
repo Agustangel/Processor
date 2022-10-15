@@ -5,10 +5,11 @@
 
 enum error_names
 {
+    ERR_BAD_ARG       = -10,
     ERR_BAD_FILE      = -9,
     ERR_BAD_PTR       = -8,
     ERR_BAD_READ      = -7,
-    ERR_IMP_OPER      = -6,
+    ERR_BAD_OPER      = -6,
     ERR_DIV_ZERO      = -5,
     ERR_UNKNOWN_OPER  = -4,
     ERR_UNKNOWN_ARG   = -3,
@@ -64,6 +65,8 @@ typedef struct regs_t
 }regs_t;
 
 
+#define RAM_SIZE 1000
+#define LEN_REG 3
 #define REG_POISON -1
 #define max_size 100
 #define count_signature 2
@@ -72,23 +75,26 @@ static const int CP = 0xABADBABE;
 static int version_system = 0;
 static const int count_regs = 4;
 
-static char RAM[1000];
-
 //asm
 int compile(struct string_t* strings, int number_strings, label_t* labelo, int number_labels, int fill_labels);
 int count_whitespace(struct string_t str, int count);
 int count_labels(struct string_t* strings, int number_strings);
 int label_exist(label_t* labels, int number_label, char* cmd);
 void get_args(struct string_t string, int* code, int* ip, label_t* labels, int number_labels);
+void get_ram(struct string_t string, int* code, int* ip, int* n);
 void get_immed(int val, int* code, int* ip);
 void get_reg(char* str, int* code, int* ip);
+void swap_arg(int* code, int* ip);
 
 //cpu
-int run(stack_t* stack, int* code, int new_count, regs_t* Regs);
+int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM);
 int check_signature(int* code);
 int get_arg(int* code, int* ip, regs_t* Regs);
 int remove_whitespace(void* buffer, long count);
 int eval(int* code, int* ip, regs_t* Regs);
+void cpu_dump(int* code, int new_count);
+char* get_bits(char n);
+char* convert_binary(char n);
 
 //dasm
 int decompile(char* code, int new_count);

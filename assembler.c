@@ -21,6 +21,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
     int* code = (int*) calloc(number_strings * 2, sizeof(int));
 
     code[ip++] = CP;
+    ++ip; // cell for version system
 
     char cmd  [max_size];
     char label[max_size];
@@ -44,7 +45,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             }
             else if(strcmp(cmd, "pop") == 0)
             {
-                code[ip++] = CMD_POP;
+                code[ip] = CMD_POP;
                 get_args(strings[idx], code, &ip, labels, number_labels);
             }
             else if(strcmp(cmd, "add") == 0)
@@ -133,7 +134,10 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
         fwrite(code, sizeof(int), number_strings * 2, out);
 
         struct stat buf;
-        stat("binary.out", &buf);
+        int ret = fstat("binary.out", &buf);
+        printf("buf.st_size = %ld\n", buf.st_size);
+        printf("ret: %d\n", ret);
+
         code[count_signature - 1] = buf.st_size;
         version_system = buf.st_size;
 
@@ -163,7 +167,9 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
     {
         if(sscanf(string.begin_string + n, "%d", &val))
         {
+            printf("alalala\n");
             get_immed(val, code, ip);
+            return;
         }
         else
         {
@@ -173,53 +179,12 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
             if((str[0] == 'r') && (len == 3))
             {
                 get_reg(str, code, ip);
+                return;
             }
             else if((str[0] == '[') && (str[len - 1] == ']'))
             {
-                code[*ip] |= ARG_RAM;
-                ++(*ip);
-
-                if(sscanf(string.begin_string + n + 1, "%d", &val))
-                {
-                    get_immed(val, code, ip);
-
-                    if(*ip == '+')
-                    {
-                        ++(*ip);
-
-                        sscanf(string.begin_string + n, "%s", str);
-                        len = strlen(str);   
-
-                        if((str[0] == 'r') && (len == 3))
-                        {
-                            get_reg(str, code, ip);
-                        }      
-                    }
-                }
-                else if((str[0] == 'r') && (len == 3))
-                {
-                    get_reg(str, code, ip);
-
-                    if(*ip == '+')
-                    {
-                        ++(*ip);
-
-                        if(sscanf(string.begin_string + n, "%d", &val))
-                        {
-                            get_immed(val, code, ip);
-                        }
-                        else
-                        {
-                            printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-                            exit(ERR_UNKNOWN_ARG);                 
-                        } 
-                    }
-                }
-                else
-                {
-                    printf("LINE %d ERROR: unknown argument.\n", __LINE__);
-                    exit(ERR_UNKNOWN_ARG);                      
-                }
+                get_ram(string, code, ip, &n);
+                return;
             }
             else
             {
@@ -237,7 +202,8 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
             if(strcmp(str, labels[idx].name))
             {
                 val = labels[idx].value;
-                code[*ip++] = val;
+                code[*ip] = val;
+                ++(*ip);
             }
         }
     }
@@ -249,6 +215,12 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
         if((str[0] == 'r') && (len == 3))
         {
             get_reg(str, code, ip);
+            return;
+        }
+        else if((str[0] == '[') && (str[len - 1] == ']'))
+        {
+            get_ram(string, code, ip, &n);
+            return;
         }
         else
         {
@@ -263,8 +235,11 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
 void get_immed(int val, int* code, int* ip)
 {
     code[*ip] |= ARG_IMMED;
+    printf("in get_immed: ip = %d\n", *ip);
     ++(*ip);
-    code[*ip++] = val;
+    code[*ip] = val;
+    printf("in get_immed: ip = %d, val = %d\n", *ip, val);
+    ++(*ip);
 }
 
 //=========================================================================
@@ -276,25 +251,135 @@ void get_reg(char* str, int* code, int* ip)
 
     if(strcmp(str, "rax") == 0)
     {
-        code[*ip++] = REG_RAX;
+        code[*ip] = REG_RAX;
+        ++(*ip);
     }
     else if(strcmp(str, "rbx"))
     {
-        code[*ip++] = REG_RBX;
+        code[*ip] = REG_RBX;
+        ++(*ip);
     }
     else if(strcmp(str, "rcx"))
     {
-        code[*ip++] = REG_RCX;
+        code[*ip] = REG_RCX;
+        ++(*ip);
     }
     else if(strcmp(str, "rdx"))
     {
-        code[*ip++] = REG_RDX;
+        code[*ip] = REG_RDX;
+        ++(*ip);
     }
     else
     {
         printf("LINE %d ERROR: unknown argument.\n", __LINE__);
         exit(ERR_UNKNOWN_ARG);                      
     }
+}
+
+//=========================================================================
+
+void get_ram(struct string_t string, int* code, int* ip, int* n)
+{
+    int count = 0;          // number of symbols read
+    int white_symbols = 0;  // number of whitespace symbols
+    int val = 0;
+    
+    char str[max_size];
+
+    code[*ip] |= ARG_RAM;
+    ++(*ip);
+    ++(*n);
+
+    sscanf(string.begin_string + *n, "%s", str);
+    int len = strlen(str);
+
+    if(sscanf(string.begin_string + *n, "%d%n", &val, &count))
+    {
+        *n += count;
+        white_symbols = count_whitespace(string, *n);
+        *n += white_symbols;
+
+        get_immed(val, code, ip);
+
+        if(*ip == '+')
+        {
+            ++(*ip);
+            ++(*n);
+            white_symbols = count_whitespace(string, *n);
+            *n += white_symbols;
+
+            if(sscanf(string.begin_string + *n, "%d", &val))
+            {
+                get_immed(val, code, ip);
+                return;
+            }
+
+            sscanf(string.begin_string + *n, "%s", str);
+            len = strlen(str);   
+
+            if((str[0] == 'r') && (len == 3))
+            {
+                get_reg(str, code, ip);
+                return;
+            }
+            else
+            {
+                printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+                exit(ERR_UNKNOWN_ARG);                      
+            }    
+        }
+    }
+    else if((str[0] == 'r') && (len == 3))
+    {
+        *n += len;
+        white_symbols = count_whitespace(string, *n);
+        *n += white_symbols;
+
+        get_reg(str, code, ip);
+
+        if(*ip == '+')
+        {
+            ++(*ip);
+            ++(*n);
+            white_symbols = count_whitespace(string, *n);
+            *n += white_symbols;
+
+            if(sscanf(string.begin_string + *n, "%d", &val))
+            {
+                get_immed(val, code, ip);
+                swap_arg(code, ip);
+                return;
+            }
+
+            sscanf(string.begin_string + *n, "%s", str);
+            len = strlen(str);   
+
+            if((str[0] == 'r') && (len == 3))
+            {
+                get_reg(str, code, ip);
+                return;
+            }
+            else
+            {
+                printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+                exit(ERR_UNKNOWN_ARG);                      
+            }  
+        }
+    }
+    else
+    {
+        printf("LINE %d ERROR: unknown argument.\n", __LINE__);
+        exit(ERR_UNKNOWN_ARG);                      
+    }
+}
+
+//=========================================================================
+
+void swap_arg(int* code, int* ip)
+{
+    int tmp = code[*ip];
+    code[*ip] = code[(*ip) - 1];
+    code[(*ip) - 1] = tmp;
 }
 
 //=========================================================================
