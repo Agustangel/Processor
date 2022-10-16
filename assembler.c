@@ -132,16 +132,15 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             exit(ERR_BAD_FILE);
         }
         fwrite(code, sizeof(int), number_strings * 2, out);
+        fclose(out);
 
         struct stat buf;
-        int ret = fstat("binary.out", &buf);
+        int ret = stat("binary.out", &buf);
         printf("buf.st_size = %ld\n", buf.st_size);
         printf("ret: %d\n", ret);
 
         code[count_signature - 1] = buf.st_size;
         version_system = buf.st_size;
-
-        fclose(out);
     }
 
     return 0;
