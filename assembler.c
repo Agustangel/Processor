@@ -18,10 +18,6 @@
 int compile(struct string_t* strings, int number_strings, label_t* labels, int number_labels, int fill_labels)
 {
     int ip = 0;
-    int* code = (int*) calloc(number_strings * 2, sizeof(int));
-
-    code[ip++] = CP;
-    ++ip; // cell for version system
 
     char cmd  [max_size];
     char label[max_size];
@@ -31,70 +27,12 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
     int white_symbols = 0; // number of whitespace symbols
     int n = 0;             // n = count + white_symbols
 
-    for(int idx = 0; idx < number_strings; ++idx)
+    if(!fill_labels)
     {
-        if(fill_labels)
-        {
-            sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //
-            printf("IDX = %d; cmd = %s\n", idx, cmd);
-
-            if(strcmp(cmd, "push") == 0)
-            {
-                code[ip] = CMD_PUSH;
-                get_args(strings[idx], code, &ip, labels, number_labels);
-            }
-            else if(strcmp(cmd, "pop") == 0)
-            {
-                code[ip] = CMD_POP;
-                get_args(strings[idx], code, &ip, labels, number_labels);
-            }
-            else if(strcmp(cmd, "add") == 0)
-            {
-                code[ip++] = CMD_ADD;
-            }
-            else if(strcmp(cmd, "sub") == 0)
-            {
-                code[ip++] = CMD_SUB;       
-            }
-            else if(strcmp(cmd, "mul") == 0)
-            {
-                code[ip++] = CMD_MUL;         
-            }
-            else if(strcmp(cmd, "div") == 0)
-            {
-                code[ip++] = CMD_DIV;        
-            }
-            else if(strcmp(cmd, "jmp") == 0)
-            {
-                code[ip++] = CMD_JMP;
-                get_args(strings[idx], code, &ip, labels, number_labels);           
-            }
-            else if(strcmp(cmd, "dup") == 0)
-            {
-                code[ip++] = CMD_DUP;
-            }
-            else if(strcmp(cmd, "out") == 0)
-            {
-                code[ip++] = CMD_OUT;
-            }
-            else if(strcmp(cmd, "hlt") == 0)
-            {
-                code[ip++] = CMD_HLT;
-                break;
-            }
-            else
-            {
-                if(!label_exist(labels, number_labels, cmd))
-                {
-                    printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-                    exit(ERR_UNKNOWN_OPER);
-                }
-            }
-        }
-        else
+        for(int idx = 0; idx < number_strings; ++idx)
         {
             sscanf(strings[idx].begin_string, "%s", label); // добавить проверку, что размера массива хватило
-            
+                
             char* tmp_ptr = label;
             char* ptr_colon = strchr(label, ':');
             if(ptr_colon == NULL)
@@ -118,37 +56,93 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
             }
 
             labels[count_label].name = label;
-            labels[count_label].value = idx;
+            labels[count_label].value = idx + 1;
             ++count_label;
         }
+
+        return 0;
     }
 
-    if(fill_labels)
+    int len_code = number_strings * 2 + LEN_SIGNATURE;
+    char* code = (char*) calloc(len_code, sizeof(char));
+
+    memcpy(code, &CP, sizeof(CP));
+    ip += sizeof(CP) / sizeof(char);
+
+    for(int idx = 0; idx < number_strings; ++idx)
     {
-        FILE* out = fopen("binary.out", "w");
-        if (out == NULL)
+        sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //
+        printf("IDX = %d; cmd = %s\n", idx, cmd);
+
+        if(strcmp(cmd, "push") == 0)
         {
-            printf("ERROR: bad file read.\n");
-            exit(ERR_BAD_FILE);
+            code[ip] = CMD_PUSH;
+            get_args(strings[idx], code, &ip, labels, number_labels);
         }
-        fwrite(code, sizeof(int), number_strings * 2, out);
-        fclose(out);
-
-        struct stat buf;
-        int ret = stat("binary.out", &buf);
-        printf("buf.st_size = %ld\n", buf.st_size);
-        printf("ret: %d\n", ret);
-
-        code[count_signature - 1] = buf.st_size;
-        version_system = buf.st_size;
+        else if(strcmp(cmd, "pop") == 0)
+        {
+            code[ip] = CMD_POP;
+            get_args(strings[idx], code, &ip, labels, number_labels);
+        }
+        else if(strcmp(cmd, "add") == 0)
+        {
+            code[ip++] = CMD_ADD;
+        }
+        else if(strcmp(cmd, "sub") == 0)
+        {
+            code[ip++] = CMD_SUB;       
+        }
+        else if(strcmp(cmd, "mul") == 0)
+        {
+            code[ip++] = CMD_MUL;         
+        }
+        else if(strcmp(cmd, "div") == 0)
+        {
+            code[ip++] = CMD_DIV;        
+        }
+        else if(strcmp(cmd, "jmp") == 0)
+        {
+            code[ip++] = CMD_JMP;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "dup") == 0)
+        {
+            code[ip++] = CMD_DUP;
+        }
+        else if(strcmp(cmd, "out") == 0)
+        {
+            code[ip++] = CMD_OUT;
+        }
+        else if(strcmp(cmd, "hlt") == 0)
+        {
+            code[ip++] = CMD_HLT;
+            break;
+        }
+        else
+        {
+            if(!label_exist(labels, number_labels, cmd))
+            {
+                printf("LINE %d ERROR: unknown operator.\n", __LINE__);
+                exit(ERR_UNKNOWN_OPER);
+            }
+        }
     }
+
+    FILE* out = fopen("binary.out", "w");
+    if (out == NULL)
+    {
+        printf("ERROR: bad file read.\n");
+        exit(ERR_BAD_FILE);
+    }
+    fwrite(code, sizeof(char), number_strings * 2, out);
+    fclose(out);
 
     return 0;
 }
 
 //=========================================================================
 
-void get_args(struct string_t string, int* code, int* ip, label_t* labels, int number_labels)
+void get_args(struct string_t string, char* code, int* ip, label_t* labels, int number_labels)
 {
     int count = 0; // number of symbols read
     int len = 0;   // len of string read
@@ -166,7 +160,6 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
     {
         if(sscanf(string.begin_string + n, "%d", &val))
         {
-            printf("alalala\n");
             get_immed(val, code, ip);
             return;
         }
@@ -231,19 +224,17 @@ void get_args(struct string_t string, int* code, int* ip, label_t* labels, int n
 
 //=========================================================================
 
-void get_immed(int val, int* code, int* ip)
+void get_immed(int val, char* code, int* ip)
 {
     code[*ip] |= ARG_IMMED;
-    printf("in get_immed: ip = %d\n", *ip);
     ++(*ip);
     code[*ip] = val;
-    printf("in get_immed: ip = %d, val = %d\n", *ip, val);
     ++(*ip);
 }
 
 //=========================================================================
 
-void get_reg(char* str, int* code, int* ip)
+void get_reg(char* str, char* code, int* ip)
 {
     code[*ip] |= ARG_REG;
     ++(*ip);
@@ -277,7 +268,7 @@ void get_reg(char* str, int* code, int* ip)
 
 //=========================================================================
 
-void get_ram(struct string_t string, int* code, int* ip, int* n)
+void get_ram(struct string_t string, char* code, int* ip, int* n)
 {
     int count = 0;          // number of symbols read
     int white_symbols = 0;  // number of whitespace symbols
@@ -374,7 +365,7 @@ void get_ram(struct string_t string, int* code, int* ip, int* n)
 
 //=========================================================================
 
-void swap_arg(int* code, int* ip)
+void swap_arg(char* code, int* ip)
 {
     int tmp = code[*ip];
     code[*ip] = code[(*ip) - 1];
@@ -387,7 +378,7 @@ int label_exist(label_t* labels, int number_labels, char* cmd)
 {
     for(int idx = 0; idx < number_labels; ++idx)
     {
-        if(strcmp(cmd, labels[idx].name))
+        if(strcmp(cmd, labels[idx].name) == 0)
         {
             return 1;
         }

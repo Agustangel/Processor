@@ -13,11 +13,13 @@
 
 //=========================================================================
 
-int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
+int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 {
     assert(stack != NULL);
     assert(code != NULL);
     assert(Regs != NULL);    
+
+    int ip = 0;
 
     int addition = 0;
     int subtraction = 0;
@@ -28,18 +30,22 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
     int ret = check_signature(code);
     HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
 
-    int ip = count_signature;
-    while(ip < new_count)
+    ip += LEN_SIGNATURE;
+    int arg = 0;
+    while(ip < count)
     {
+        //printf("code[%d] = %d \n", ip, code[ip]);
+        //printf("code[%d] & CMD_MASK_1 = %d\n", ip, code[ip] & CMD_MASK_1);
         switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
-            stack_push(stack, get_arg(code, &ip, Regs));
+            arg = eval(code, &ip, Regs, RAM);
+            stack_push(stack, 2);
             ++ip;
             break;
 
         case CMD_POP:
-            Regs[get_arg(code, &ip, Regs) - 1].value = stack_pop(stack);
+            Regs[eval(code, &ip, Regs, RAM) - 1].value = stack_pop(stack);
             ++ip;
             break;
 
@@ -105,7 +111,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_BAD_OPER);  
             }
-
+            //stack_dump(stack);
             out = stack_pop(stack);
             printf("out = %d\n", out);
             ++ip;
@@ -117,7 +123,6 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_BAD_OPER);  
             }
-
             out = stack_pop(stack);
             stack_push(stack, out);
             stack_push(stack, out);
@@ -125,7 +130,7 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
             break;
 
         case CMD_JMP:
-            ip = eval(code, &ip, Regs) + 2; // transition cell number, taking into account the signature
+            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE; // transition cell number, taking into account the signature
             break;
 
         case CMD_HLT:
@@ -143,17 +148,14 @@ int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM)
 
 //=========================================================================
 
-int check_signature(int* code)
+int check_signature(char* code)
 {
     assert(code != NULL);
+    int len = sizeof(CP) / sizeof(char);
 
-    if(code[0] != CP)
+    if((memcmp(code, &CP, sizeof(CP)) != 0))
     {
         return ERR_BAD_SIGNATURE;
-    }
-    if(code[1] != version_system)
-    {
-        return ERR_BAD_VERSION;
     }
 
     return 0;
@@ -161,7 +163,7 @@ int check_signature(int* code)
 
 //=========================================================================
 
-int eval(int* code, int* ip, regs_t* Regs)
+int eval(char* code, int* ip, regs_t* Regs, char* RAM)
 {
     assert(code != NULL);
     assert(ip != NULL);
@@ -170,7 +172,7 @@ int eval(int* code, int* ip, regs_t* Regs)
     int arg = 0;
     ++(*ip);
 
-    if(cmd == CMD_PUSH)
+    if((cmd  & CMD_MASK_1) == CMD_PUSH)
     {
         if(cmd & ARG_IMMED)
         {
@@ -223,72 +225,72 @@ int eval(int* code, int* ip, regs_t* Regs)
 
 //=========================================================================
 
-void cpu_dump(int* code, int new_count)
+void cpu_dump(char* code, int count)
 {
     char binary[8];
     char bits[3];
-    int ip = count_signature;
+    int ip = LEN_SIGNATURE;
 
-    while(ip < new_count)
+    while(ip < count)
     {   
         switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
-            bits = get_bits(code[ip]);
-            binary = convert_binary[code[ip]];
+            fill_bits(code[ip], bits);
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (%s #1)\n", code[ip], code[ip], binary, bits);
             ++ip;
             break;
 
         case CMD_POP:
-            bits = get_bits(code[ip]);
-            binary = convert_binary[code[ip]];
+            fill_bits(code[ip], bits);
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (%s #2)\n", code[ip], code[ip], binary, bits);
             ++ip;
             break;
 
         case CMD_ADD:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#3)\n", code[ip], code[ip], binary);
             ++ip;
             break;
 
         case CMD_SUB:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#4)\n", code[ip], code[ip], binary);
             ++ip;
             break;
 
         case CMD_MUL:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#5)\n", code[ip], code[ip], binary);
             ++ip;
             break;
 
         case CMD_DIV:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#6)\n", code[ip], code[ip], binary);
             ++ip;
             break;
 
         case CMD_OUT:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#7)\n", code[ip], code[ip], binary);
             ++ip;
             break;
 
         case CMD_HLT:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#8)\n", code[ip], code[ip], binary);
             break;
 
         case CMD_DUP:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#9)\n", code[ip], code[ip], binary);
             break;
 
         case CMD_JMP:
-            binary = convert_binary[code[ip]];
+            convert_binary(code[ip], binary);
             LOG("%d %x %s (#10)\n", code[ip], code[ip], binary);
             break;
 
@@ -302,46 +304,22 @@ void cpu_dump(int* code, int new_count)
 
 //=========================================================================
 
-char* get_bits(char n)
+void fill_bits(char n, char* bits)
 {
-    char bits[3];
     bits[0] = (n & ARG_RAM)   ? 'M' : 'm';
     bits[1] = (n & ARG_REG)   ? 'R' : 'r';
     bits[2] = (n & ARG_IMMED) ? 'I' : 'i';
-
-    return bits;
 }
 
 //=========================================================================
 
-char* convert_binary(char n)
+void convert_binary(char n, char* binary)
 {
-    char binary[8];
     for (int i = 0; i < 8; ++i)
     {
         binary[i] = (n & 0x80) ? '1' : '0';
         n <<= 1;
     }
-
-    return binary;
-}
-
-//=========================================================================
-
-int remove_whitespace(void* buffer, long count)
-{
-    assert(buffer != NULL);
-
-    int new_count = 0;
-    for(int idx = 0; idx < count; ++idx)
-    {
-        if(isdigit(buffer[idx]))
-        {
-            ++new_count;
-        }
-    }
-
-    return new_count;
 }
 
 //=========================================================================
@@ -365,7 +343,7 @@ int main()
 
     stack_t stack;
     int init_size = 10;
-    stack_init(&stack, init_size);
+    stack_init(&stack, init_size); 
     
     FILE* binary_file = fopen("binary.out", "r");
     if (binary_file == NULL)
@@ -377,8 +355,8 @@ int main()
     long count = count_symbols(binary_file);
     HANDLE_ERROR(count, ERR_BAD_PTR, "ERROR: pointer outside file.\n");
 
-    char* buffer = (char*) calloc(count, sizeof(char));
-    int ret = fill_buffer(binary_file, buffer, sizeof(char), count);
+    char* code = (char*) calloc(count, sizeof(char));
+    int ret = fill_buffer(binary_file, code, sizeof(char), count);
     HANDLE_ERROR(ret, ERR_BAD_READ, "ERROR: file read error.\n");
 
     fclose(binary_file);
@@ -386,13 +364,10 @@ int main()
     regs_t* Regs = (regs_t*) calloc(count_regs, sizeof(regs_t));
     regs_init(Regs);
     
-    int new_count = remove_whitespace(buffer, count);
-    char* code = (char*) realloc(buffer, new_count * sizeof(char));
-    free(buffer);
-
     char* RAM = (char*) malloc(RAM_SIZE * sizeof(char));
 
-    run(&stack, code, new_count, Regs, RAM);
+    run(&stack, code, count, Regs, RAM);
+    //cpu_dump(code, count);
 
     stack_dump(&stack);
     stack_destroy(&stack);

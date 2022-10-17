@@ -13,8 +13,7 @@ enum error_names
     ERR_DIV_ZERO      = -5,
     ERR_UNKNOWN_OPER  = -4,
     ERR_UNKNOWN_ARG   = -3,
-    ERR_BAD_SIGNATURE = -2,
-    ERR_BAD_VERSION   = -1
+    ERR_BAD_SIGNATURE = -2
 };
 
 enum commands
@@ -67,12 +66,11 @@ typedef struct regs_t
 
 #define RAM_SIZE 1000
 #define LEN_REG 3
+#define LEN_SIGNATURE 4
 #define REG_POISON -1
 #define max_size 100
-#define count_signature 2
 
 static const int CP = 0xABADBABE;
-static int version_system = 0;
 static const int count_regs = 4;
 
 //asm
@@ -80,21 +78,19 @@ int compile(struct string_t* strings, int number_strings, label_t* labelo, int n
 int count_whitespace(struct string_t str, int count);
 int count_labels(struct string_t* strings, int number_strings);
 int label_exist(label_t* labels, int number_label, char* cmd);
-void get_args(struct string_t string, int* code, int* ip, label_t* labels, int number_labels);
-void get_ram(struct string_t string, int* code, int* ip, int* n);
-void get_immed(int val, int* code, int* ip);
-void get_reg(char* str, int* code, int* ip);
-void swap_arg(int* code, int* ip);
+void get_args(struct string_t string, char* code, int* ip, label_t* labels, int number_labels);
+void get_ram(struct string_t string, char* code, int* ip, int* n);
+void get_immed(int val, char* code, int* ip);
+void get_reg(char* str, char* code, int* ip);
+void swap_arg(char* code, int* ip);
 
 //cpu
-int run(stack_t* stack, int* code, int new_count, regs_t* Regs, char* RAM);
-int check_signature(int* code);
-int get_arg(int* code, int* ip, regs_t* Regs);
-int remove_whitespace(void* buffer, long count);
-int eval(int* code, int* ip, regs_t* Regs);
-void cpu_dump(int* code, int new_count);
-char* get_bits(char n);
-char* convert_binary(char n);
+int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM);
+int check_signature(char* code);
+int eval(char* code, int* ip, regs_t* Regs, char* RAM);
+void cpu_dump(char* code, int count);
+void fill_bits(char n, char* bits);
+void convert_binary(char n, char* binary);
 
 //dasm
 int decompile(char* code, int new_count);
