@@ -26,6 +26,9 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int multiplication = 0;
     int division = 0;
     int out = 0;
+
+    int lhs = 0;
+    int rhs = 0;
     
     int ret = check_signature(code);
     HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
@@ -34,8 +37,6 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int arg = 0;
     while(ip < count)
     {
-        //printf("code[%d] = %d \n", ip, code[ip]);
-        //printf("code[%d] & CMD_MASK_1 = %d\n", ip, code[ip] & CMD_MASK_1);
         switch (code[ip] & CMD_MASK_1)
         {
         case CMD_PUSH:
@@ -92,8 +93,8 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
                 exit(ERR_BAD_OPER);
             }
 
-            int rhs = stack_pop(stack);
-            int lhs = stack_pop(stack);
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
             if(rhs == 0)
             {
                 printf("ERROR: division by zero.\n");
@@ -131,6 +132,102 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
         case CMD_JMP:
             ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE; // transition cell number, taking into account the signature
+            break;
+
+        case CMD_JB:
+            if(stack->count < 2)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);
+            }
+
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+
+            if(lhs < rhs)
+            {
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+            }
+            break;
+
+        case CMD_JBE:
+            if(stack->count < 2)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);
+            }
+
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+
+            if(lhs <= rhs)
+            {
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+            }
+            break;
+
+        case CMD_JA:
+            if(stack->count < 2)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);
+            }
+
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+
+            if(lhs > rhs)
+            {
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+            }
+            break;
+
+        case CMD_JAE:
+            if(stack->count < 2)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);
+            }
+
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+
+            if(lhs >= rhs)
+            {
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+            }
+            break;
+
+        case CMD_JE:
+            if(stack->count < 2)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);
+            }
+
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+
+            if(lhs == rhs)
+            {
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+            }
+            break;
+
+        case CMD_JNE:
+            if(stack->count < 2)
+            {
+                printf("ERROR: impossible operation.\n");
+                exit(ERR_BAD_OPER);
+            }
+
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+
+            if(lhs < rhs)
+            {
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+            }
             break;
 
         case CMD_HLT:
@@ -191,11 +288,12 @@ int eval(char* code, int* ip, regs_t* Regs, char* RAM)
             arg = RAM[arg];
         }
     }
-    if(cmd == CMD_JMP)
+    if((cmd == CMD_JMP) || (cmd == CMD_JB) || (cmd == CMD_JBE) || (cmd == CMD_JA) ||
+       (cmd == CMD_JAE) || (cmd == CMD_JE) || (cmd == CMD_JNE))
     {
         arg = code[*ip];
     }
-    if(cmd == CMD_POP)
+    if((cmd  & CMD_MASK_1) == CMD_POP)
     {
         if((cmd & ARG_IMMED) && !(cmd & ARG_RAM))
         {

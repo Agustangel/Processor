@@ -3,7 +3,7 @@ l_2
 dup
 dup
 mul
-out
+out 
 push 1
 add
 jmp l_2

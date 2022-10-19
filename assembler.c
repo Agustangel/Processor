@@ -31,7 +31,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
     {
         for(int idx = 0; idx < number_strings; ++idx)
         {
-            sscanf(strings[idx].begin_string, "%s", label); // добавить проверку, что размера массива хватило
+            sscanf(strings[idx].begin_string, "%s", label);
                 
             char* tmp_ptr = label;
             char* ptr_colon = strchr(label, ':');
@@ -103,6 +103,36 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
         else if(strcmp(cmd, "jmp") == 0)
         {
             code[ip++] = CMD_JMP;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "jb") == 0)
+        {
+            code[ip++] = CMD_JB;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "jbe") == 0)
+        {
+            code[ip++] = CMD_JBE;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "ja") == 0)
+        {
+            code[ip++] = CMD_JA;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "jae") == 0)
+        {
+            code[ip++] = CMD_JAE;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "je") == 0)
+        {
+            code[ip++] = CMD_JE;
+            get_args(strings[idx], code, &ip, labels, number_labels);           
+        }
+        else if(strcmp(cmd, "jne") == 0)
+        {
+            code[ip++] = CMD_JNE;
             get_args(strings[idx], code, &ip, labels, number_labels);           
         }
         else if(strcmp(cmd, "dup") == 0)
@@ -185,7 +215,9 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
             }      
         }
     }
-    else if(strcmp(cmd, "jmp") == 0)
+    else if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0) || (strcmp(cmd, "jbe") == 0)
+         || (strcmp(cmd, "ja") == 0) || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0)
+         || (strcmp(cmd, "jne") == 0))
     {
         sscanf(string.begin_string + n, "%s", str);
                 

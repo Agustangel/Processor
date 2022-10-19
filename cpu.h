@@ -27,7 +27,13 @@ enum commands
     CMD_OUT  = 7,
     CMD_HLT  = 8,
     CMD_DUP  = 9,
-    CMD_JMP  = 10
+    CMD_JMP  = 10,
+    CMD_JB   = 11,
+    CMD_JBE  = 12,
+    CMD_JA   = 13,
+    CMD_JAE  = 14,
+    CMD_JE   = 15,
+    CMD_JNE  = 16
 };
 
 enum regs
