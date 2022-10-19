@@ -1,4 +1,5 @@
 push 2
+l_2
 dup
 dup
 mul

@@ -7,13 +7,12 @@
 
 //=========================================================================
 
-int decompile(char* code, int count, int* pos_labels, int found_labels)
+int decompile(char* code, int count, int* pos_labels, int* real_count_labels, int found_labels)
 {
-    int real_count_labels = 0;
     if(!found_labels)
     {
         // this method is necessary in order not to count the immediate as command jmp
-        fill_pos_labels(code, count, &real_count_label);
+        fill_pos_labels(code, count, pos_labels, real_count_labels);
         return 0;
     }
 
@@ -24,19 +23,22 @@ int decompile(char* code, int count, int* pos_labels, int found_labels)
         exit(ERR_BAD_FILE);
     }
 
+    int count_labels = *real_count_labels;
+
     int ip = LEN_SIGNATURE;
-    int idx = 0;
-    int positipon = 0;
+    int positipon = 0; // line where label locates
+
     while(ip < count)
     {
+        ++positipon;
+
         if((code[ip] & CMD_MASK_1) == CMD_HLT)
         {
             fprintf(out, "hlt\n");
             break;
         }
         
-        positipon = ip - LEN_SIGNATURE + 1; // line where label locates
-        if(dasm_label_exist(pos_labels, real_count_labels, positipon))
+        if(dasm_label_exist(pos_labels, count_labels, positipon))
         {
             fprintf(out, "l_%d\n", positipon);
             continue;
@@ -286,7 +288,7 @@ void skip_arg(char* code, int* ip)
 
 //=========================================================================
 
-void fill_pos_labels(char* code, int count, int* real_count_label)
+void fill_pos_labels(char* code, int count, int* pos_labels, int* real_count_label)
 {
     int ip = LEN_SIGNATURE;
     int idx = 0;
@@ -328,8 +330,9 @@ void fill_pos_labels(char* code, int count, int* real_count_label)
 
         case CMD_JMP:
             ++ip;
-            pos_labels[idx] = code[idx];
+            pos_labels[idx] = code[ip];
             ++(*real_count_label);
+            ++idx;
             break;
 
         case CMD_DUP:
@@ -349,9 +352,9 @@ void fill_pos_labels(char* code, int count, int* real_count_label)
 
 //=========================================================================
 
-int dasm_label_exist(int* pos_labels, int count, int positiont)
+int dasm_label_exist(int* pos_labels, int count_labels, int positiont)
 {
-    for(int idx = 0; idx < count; ++idx)
+    for(int idx = 0; idx < count_labels; ++idx)
     {
         if(pos_labels[idx] == positiont)
         {
@@ -386,11 +389,12 @@ int main()
 
     int count_labels = dasm_count_labels(code, count);
     int pos_labels[count_labels];
+    int real_count_labels = 0;
 
     int found_labels = 0;
-    decompile(code, count, pos_labels, found_labels);
-    int found_labels = 1;
-    decompile(code, count, pos_labels, found_labels);
+    decompile(code, count, pos_labels, &real_count_labels, found_labels);
+    found_labels = 1;
+    decompile(code, count, pos_labels, &real_count_labels, found_labels);
 
     logger_finalize(file);
 

@@ -93,6 +93,10 @@ void fill_bits(char n, char* bits);
 void convert_binary(char n, char* binary);
 
 //dasm
-int decompile(char* code, int new_count);
+int decompile(char* code, int count, int* pos_labels, int* real_count_labels, int found_labels);
 void dis_eval(FILE* out, char* code, int* ip);
 void fprintf_reg(FILE* out, char* code, int* ip);
+int dasm_count_labels(char* code, int count);
+void skip_arg(char* code, int* ip);
+void fill_pos_labels(char* code, int count, int* pos_labels, int* real_count_label);
+int dasm_label_exist(int* pos_labels, int count, int positiont);
