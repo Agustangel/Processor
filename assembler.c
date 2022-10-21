@@ -15,50 +15,35 @@
 
 //=========================================================================
 
-int compile(struct string_t* strings, int number_strings, label_t* labels, int number_labels, int fill_labels)
+int compile(struct string_t* strings, int number_strings, label_t* labels, int* number_labels, int fill_labels)
 {
     int ip = 0;
 
-    char cmd  [max_size];
-    char label[max_size];
+    char cmd [max_size];
 
-    int count_label = 0;
     int count = 0;         // number of symbols read
     int white_symbols = 0; // number of whitespace symbols
     int n = 0;             // n = count + white_symbols
 
     if(!fill_labels)
     {
+        int count_label = 0;
         for(int idx = 0; idx < number_strings; ++idx)
         {
-            sscanf(strings[idx].begin_string, "%s", label);
-                
-            char* tmp_ptr = label;
-            char* ptr_colon = strchr(label, ':');
-            if(ptr_colon == NULL)
+            sscanf(strings[idx].begin_string, "%s", cmd);
+            if(is_label(cmd))
             {
-                continue;
-            }
+                char* label = (char*) calloc(strlen(cmd), sizeof(char));
+                sscanf(strings[idx].begin_string, "%s", label);
 
-            if(*(ptr_colon + 1) != '\0')
-            {
-                printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-                exit(ERR_UNKNOWN_OPER);
-            }
-            while(tmp_ptr < ptr_colon)
-            {
-                if(!isalnum(*tmp_ptr))
-                {
-                    printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-                    exit(ERR_UNKNOWN_OPER);                    
-                }
-                ++tmp_ptr;
-            }
+                labels[count_label].name = label;
+                labels[count_label].value = idx + 1;
 
-            labels[count_label].name = label;
-            labels[count_label].value = idx + 1;
-            ++count_label;
+                ++count_label;
+            }
         }
+
+        *number_labels = count_label;
 
         return 0;
     }
@@ -72,17 +57,16 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
     for(int idx = 0; idx < number_strings; ++idx)
     {
         sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //
-        printf("IDX = %d; cmd = %s\n", idx, cmd);
 
         if(strcmp(cmd, "push") == 0)
         {
             code[ip] = CMD_PUSH;
-            get_args(strings[idx], code, &ip, labels, number_labels);
+            get_args(strings[idx], code, &ip, labels, *number_labels);
         }
         else if(strcmp(cmd, "pop") == 0)
         {
             code[ip] = CMD_POP;
-            get_args(strings[idx], code, &ip, labels, number_labels);
+            get_args(strings[idx], code, &ip, labels, *number_labels);
         }
         else if(strcmp(cmd, "add") == 0)
         {
@@ -100,40 +84,54 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
         {
             code[ip++] = CMD_DIV;        
         }
+        else if(strcmp(cmd, "in") == 0)
+        {
+            code[ip++] = CMD_IN;
+            get_args(strings[idx], code, &ip, labels, *number_labels);
+        }
+        else if(strcmp(cmd, "call") == 0)
+        {
+            code[ip++] = CMD_CALL;
+            get_args(strings[idx], code, &ip, labels, *number_labels);
+        }
+        else if(strcmp(cmd, "ret") == 0)
+        {
+            code[ip++] = CMD_RET;
+        }
         else if(strcmp(cmd, "jmp") == 0)
         {
             code[ip++] = CMD_JMP;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "jb") == 0)
         {
             code[ip++] = CMD_JB;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "jbe") == 0)
         {
             code[ip++] = CMD_JBE;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "ja") == 0)
         {
             code[ip++] = CMD_JA;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "jae") == 0)
         {
             code[ip++] = CMD_JAE;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "je") == 0)
         {
             code[ip++] = CMD_JE;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "jne") == 0)
         {
             code[ip++] = CMD_JNE;
-            get_args(strings[idx], code, &ip, labels, number_labels);           
+            get_args(strings[idx], code, &ip, labels, *number_labels);           
         }
         else if(strcmp(cmd, "dup") == 0)
         {
@@ -150,7 +148,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int n
         }
         else
         {
-            if(!label_exist(labels, number_labels, cmd))
+            if(!label_exist(labels, *number_labels, cmd))
             {
                 printf("LINE %d ERROR: unknown operator.\n", __LINE__);
                 exit(ERR_UNKNOWN_OPER);
@@ -200,7 +198,7 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
 
             if((str[0] == 'r') && (len == 3))
             {
-                get_reg(str, code, ip);
+                get_reg(str, code, ip);             
                 return;
             }
             else if((str[0] == '[') && (str[len - 1] == ']'))
@@ -215,9 +213,9 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
             }      
         }
     }
-    else if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0) || (strcmp(cmd, "jbe") == 0)
-         || (strcmp(cmd, "ja") == 0) || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0)
-         || (strcmp(cmd, "jne") == 0))
+    else if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0)  || (strcmp(cmd, "jbe") == 0)
+         || (strcmp(cmd, "ja") == 0)  || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0)
+         || (strcmp(cmd, "jne") == 0) || (strcmp(cmd, "call") == 0))
     {
         sscanf(string.begin_string + n, "%s", str);
                 
@@ -251,6 +249,12 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
             printf("LINE %d ERROR: unknown argument.\n", __LINE__);
             exit(ERR_UNKNOWN_ARG);                 
         }      
+    }
+    else if(strcmp(cmd, "in") == 0)
+    {
+        scanf("%d", &val);
+        code[*ip] = val;
+        ++(*ip);
     }
 }
 
@@ -406,6 +410,35 @@ void swap_arg(char* code, int* ip)
 
 //=========================================================================
 
+int is_label(char* cmd)
+{
+    char* tmp_ptr = cmd;
+    char* ptr_colon = strchr(cmd, ':');
+    if(ptr_colon == NULL)
+    {
+        return 0;
+    }
+
+    if(*(ptr_colon + 1) != '\0')
+    {
+        printf("LINE %d ERROR: unknown operator.\n", __LINE__);
+        exit(ERR_UNKNOWN_OPER);
+    }
+    while(tmp_ptr < ptr_colon)
+    {
+        if(!isalnum(*tmp_ptr))
+        {
+            printf("LINE %d ERROR: unknown operator.\n", __LINE__);
+            exit(ERR_UNKNOWN_OPER);                    
+        }
+        ++tmp_ptr;
+    }
+
+    return 1;
+}
+
+//=========================================================================
+
 int label_exist(label_t* labels, int number_labels, char* cmd)
 {
     for(int idx = 0; idx < number_labels; ++idx)
@@ -445,7 +478,9 @@ int count_labels(struct string_t* strings, int number_strings)
     for(int idx = 0; idx < number_strings; ++idx)
     {
         sscanf(strings[idx].begin_string, "%s", cmd);
-        if(strcmp(cmd, "jmp") == 0)
+        if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0)  || (strcmp(cmd, "jbe") == 0) ||
+           (strcmp(cmd, "ja") == 0)  || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0)  ||
+           (strcmp(cmd, "jne") == 0) || (strcmp(cmd, "call") == 0))
         {
             ++count_lab;
         }
@@ -484,9 +519,9 @@ int main()
     label_t* labels = (label_t*) calloc(number_labels, sizeof(label_t));
 
     int fill_labels = 0; 
-    compile(strings, number_strings, labels, number_labels, fill_labels); // the first compile
+    compile(strings, number_strings, labels, &number_labels, fill_labels); // the first compile
     fill_labels = 1;
-    compile(strings, number_strings, labels, number_labels, fill_labels); // the second compile
+    compile(strings, number_strings, labels, &number_labels, fill_labels); // the second compile
 
     logger_finalize(file);
 

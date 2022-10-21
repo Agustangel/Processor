@@ -1,10 +1,23 @@
-push 2
-next:
-dup 
-dup
-mul
-out
 push 1
-add
-jmp next
-hlt
+pop rbx
+in
+pop rcx
+push 0
+pop rdx
+call FACTORIAL
+FACTORIAL:
+        push rdx
+        push rcx
+        jae END
+        push rdx
+        push rbx
+        mul
+        pop rbx
+        push 1
+        push rdx
+        add
+        pop rdx
+        call FACTORIAL
+END:
+    push rbx
+    out

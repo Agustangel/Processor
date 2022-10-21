@@ -37,11 +37,13 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int arg = 0;
     while(ip < count)
     {
-        switch (code[ip] & CMD_MASK_1)
+        //printf("code[%d] = %d\n", ip - LEN_SIGNATURE, code[ip] & CMD_MASK_2);
+        //cpu_dump(code, count);
+        switch (code[ip] & CMD_MASK_2)
         {
         case CMD_PUSH:
             arg = eval(code, &ip, Regs, RAM);
-            stack_push(stack, 2);
+            stack_push(stack, arg);
             ++ip;
             break;
 
@@ -112,7 +114,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
                 printf("ERROR: impossible operation.\n");
                 exit(ERR_BAD_OPER);  
             }
-            //stack_dump(stack);
+
             out = stack_pop(stack);
             printf("out = %d\n", out);
             ++ip;
@@ -130,8 +132,21 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
             ++ip;
             break;
 
+        case CMD_IN:
+            arg = eval(code, &ip, Regs, RAM);
+            stack_push(stack, arg);
+            break;
+
+        case CMD_CALL:
+            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1; // transition cell number, taking into account the signature           
+            break;
+
+        case CMD_RET:
+            ip = Regs[REG_RAX].value - 1; // The register contains the line number. We go to the team number
+            break;
+
         case CMD_JMP:
-            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE; // transition cell number, taking into account the signature
+            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1; // transition cell number, taking into account the signature
             break;
 
         case CMD_JB:
@@ -146,7 +161,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs < rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
             }
             break;
 
@@ -162,7 +177,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs <= rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
             }
             break;
 
@@ -178,7 +193,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs > rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
             }
             break;
 
@@ -194,7 +209,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs >= rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
             }
             break;
 
@@ -210,7 +225,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs == rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
             }
             break;
 
@@ -226,7 +241,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs < rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
             }
             break;
 
@@ -269,7 +284,7 @@ int eval(char* code, int* ip, regs_t* Regs, char* RAM)
     int arg = 0;
     ++(*ip);
 
-    if((cmd  & CMD_MASK_1) == CMD_PUSH)
+    if((cmd  & CMD_MASK_2) == CMD_PUSH)
     {
         if(cmd & ARG_IMMED)
         {
@@ -289,11 +304,15 @@ int eval(char* code, int* ip, regs_t* Regs, char* RAM)
         }
     }
     if((cmd == CMD_JMP) || (cmd == CMD_JB) || (cmd == CMD_JBE) || (cmd == CMD_JA) ||
-       (cmd == CMD_JAE) || (cmd == CMD_JE) || (cmd == CMD_JNE))
+       (cmd == CMD_JAE) || (cmd == CMD_JE) || (cmd == CMD_JNE) || (cmd == CMD_CALL))
     {
         arg = code[*ip];
     }
-    if((cmd  & CMD_MASK_1) == CMD_POP)
+    if(cmd == CMD_IN)
+    {
+        arg = code[*ip];
+    }
+    if((cmd  & CMD_MASK_2) == CMD_POP)
     {
         if((cmd & ARG_IMMED) && !(cmd & ARG_RAM))
         {
@@ -331,7 +350,7 @@ void cpu_dump(char* code, int count)
 
     while(ip < count)
     {   
-        switch (code[ip] & CMD_MASK_1)
+        switch (code[ip] & CMD_MASK_2)
         {
         case CMD_PUSH:
             fill_bits(code[ip], bits);
