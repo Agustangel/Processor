@@ -41,10 +41,10 @@ enum commands
 
 enum regs
 {
-    REG_RAX = 0,
-    REG_RBX = 1,
-    REG_RCX = 2,
-    REG_RDX = 3
+    REG_RAX = 1,
+    REG_RBX = 2,
+    REG_RCX = 3,
+    REG_RDX = 4
 };
 
 enum args
@@ -87,7 +87,9 @@ int compile(struct string_t* strings, int number_strings, label_t* labelo, int* 
 int count_whitespace(struct string_t str, int count);
 int count_labels(struct string_t* strings, int number_strings);
 int label_exist(label_t* labels, int number_label, char* cmd);
+int fill_label(struct string_t string, label_t* labels, int* count_label, int* position);
 int is_label(char* cmd);
+void asm_skip_arg(struct string_t string, char* cmd, int count, int* position);
 void get_args(struct string_t string, char* code, int* ip, label_t* labels, int number_labels);
 void get_ram(struct string_t string, char* code, int* ip, int* n);
 void get_immed(int val, char* code, int* ip);

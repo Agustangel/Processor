@@ -18,7 +18,6 @@
 int compile(struct string_t* strings, int number_strings, label_t* labels, int* number_labels, int fill_labels)
 {
     int ip = 0;
-
     char cmd [max_size];
 
     int count = 0;         // number of symbols read
@@ -28,21 +27,12 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
     if(!fill_labels)
     {
         int count_label = 0;
+        int position = 0;
+
         for(int idx = 0; idx < number_strings; ++idx)
         {
-            sscanf(strings[idx].begin_string, "%s", cmd);
-            if(is_label(cmd))
-            {
-                char* label = (char*) calloc(strlen(cmd), sizeof(char));
-                sscanf(strings[idx].begin_string, "%s", label);
-
-                labels[count_label].name = label;
-                labels[count_label].value = idx + 1;
-
-                ++count_label;
-            }
+            fill_label(strings[idx], labels, &count_label, &position);
         }
-
         *number_labels = count_label;
 
         return 0;
@@ -51,13 +41,14 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
     int len_code = number_strings * 2 + LEN_SIGNATURE;
     char* code = (char*) calloc(len_code, sizeof(char));
 
-    memcpy(code, &CP, sizeof(CP));
-    ip += sizeof(CP) / sizeof(char);
+    // memcpy(code, &CP, sizeof(CP));
+    // ip += LEN_SIGNATURE;
 
     for(int idx = 0; idx < number_strings; ++idx)
     {
         sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //
 
+        //printf("%s\n", cmd);
         if(strcmp(cmd, "push") == 0)
         {
             code[ip] = CMD_PUSH;
@@ -213,18 +204,22 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
             }      
         }
     }
-    else if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0)  || (strcmp(cmd, "jbe") == 0)
-         || (strcmp(cmd, "ja") == 0)  || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0)
-         || (strcmp(cmd, "jne") == 0) || (strcmp(cmd, "call") == 0))
+    else if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0)  || (strcmp(cmd, "jbe") == 0) ||
+            (strcmp(cmd, "ja") == 0)  || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0)  ||
+            (strcmp(cmd, "jne") == 0) || (strcmp(cmd, "call") == 0))
     {
         sscanf(string.begin_string + n, "%s", str);
                 
         for(int idx = 0; idx < number_labels; ++idx)
         {
-            if(strcmp(str, labels[idx].name))
+            //printf("labels[%d].name = %s\n", idx, labels[idx].name);
+            //printf("str = %s\n", str);
+            if(strcmp(str, labels[idx].name) == 0)
             {
                 val = labels[idx].value;
                 code[*ip] = val;
+                // printf("code[*ip] = %d\n", code[*ip]);
+                //printf("*ip = %d\n", *ip);
                 ++(*ip);
             }
         }
@@ -278,21 +273,25 @@ void get_reg(char* str, char* code, int* ip)
     if(strcmp(str, "rax") == 0)
     {
         code[*ip] = REG_RAX;
+        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
-    else if(strcmp(str, "rbx"))
+    else if(strcmp(str, "rbx") == 0)
     {
         code[*ip] = REG_RBX;
+        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
-    else if(strcmp(str, "rcx"))
+    else if(strcmp(str, "rcx") == 0)
     {
         code[*ip] = REG_RCX;
+        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
-    else if(strcmp(str, "rdx"))
+    else if(strcmp(str, "rdx") == 0)
     {
         code[*ip] = REG_RDX;
+        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
     else
@@ -327,7 +326,7 @@ void get_ram(struct string_t string, char* code, int* ip, int* n)
 
         get_immed(val, code, ip);
 
-        if(*ip == '+')
+        if(*(string.begin_string + *n) == '+')
         {
             ++(*ip);
             ++(*n);
@@ -363,7 +362,7 @@ void get_ram(struct string_t string, char* code, int* ip, int* n)
 
         get_reg(str, code, ip);
 
-        if(*ip == '+')
+        if(*(string.begin_string + *n) == '+')
         {
             ++(*ip);
             ++(*n);
@@ -406,6 +405,194 @@ void swap_arg(char* code, int* ip)
     int tmp = code[*ip];
     code[*ip] = code[(*ip) - 1];
     code[(*ip) - 1] = tmp;
+}
+
+//=========================================================================
+
+int fill_label(struct string_t string, label_t* labels, int* count_label, int* position)
+{
+    char cmd [max_size];
+    int count = 0;
+    sscanf(string.begin_string, "%s%n", cmd, &count); //
+
+    if(is_label(cmd))
+    {
+        char* label = (char*) calloc(strlen(cmd), sizeof(char));
+        sscanf(string.begin_string, "%s", label);
+
+        labels[*count_label].name = label;
+        labels[*count_label].value = *position; // code[*position] is number next instruction
+        
+        ++(*count_label);
+    }
+    else if(strcmp(cmd, "push") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "pop") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);  
+    }
+    else if(strcmp(cmd, "add") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "sub") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "mul") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "div") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "in") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "call") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "ret") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "jmp") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "jb") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "jbe") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "ja") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "jae") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "je") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "jne") == 0)
+    {
+        ++(*position);
+        asm_skip_arg(string, cmd, count, position);
+    }
+    else if(strcmp(cmd, "dup") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "out") == 0)
+    {
+        ++(*position);
+    }
+    else if(strcmp(cmd, "hlt") == 0)
+    {
+        ++(*position);
+    }
+}
+
+//=========================================================================
+
+void asm_skip_arg(struct string_t string, char* cmd, int count, int* position)
+{
+    int val = 0;
+    char str[max_size];
+
+    int white_symbols = count_whitespace(string, count);
+    int n = count + white_symbols;
+
+    if(strcmp(cmd, "push") == 0)
+    {
+        if(sscanf(string.begin_string + n, "%d", &val))
+        {
+            ++(*position);
+            return;
+        }
+        else
+        {
+            sscanf(string.begin_string + n, "%s", str);
+            int len = strlen(str);
+            ++(*position);             
+            return;
+            
+            if((str[0] == '[') && (str[len - 1] == ']'))
+            {
+                ++n;
+                sscanf(string.begin_string + n, "%s%d", str, &count);
+                
+                n += count;
+                white_symbols = count_whitespace(string, n);
+                n += white_symbols;
+
+                if(*(string.begin_string + n) == '+')
+                {
+                    ++(*position);
+                }
+
+                return;
+            }     
+        }
+    }
+    if(strcmp(cmd, "pop") == 0)
+    {
+        sscanf(string.begin_string + n, "%s", str);
+        int len = strlen(str);
+        ++(*position);             
+        return;
+            
+        if((str[0] == '[') && (str[len - 1] == ']'))
+        {
+            ++n;
+            sscanf(string.begin_string + n, "%s%d", str, &count);
+            
+            n += count;
+            white_symbols = count_whitespace(string, n);
+            n += white_symbols;
+
+            if(*(string.begin_string + n) == '+')
+            {
+                ++(*position);
+            }
+                
+            return;
+        }
+    }
+    if((strcmp(cmd, "in") == 0))
+    {
+        ++(*position);
+        return;
+    }
+    if((strcmp(cmd, "jmp") == 0) || (strcmp(cmd, "jb") == 0)  || (strcmp(cmd, "jbe") == 0)||
+       (strcmp(cmd, "ja") == 0)  || (strcmp(cmd, "jae") == 0) || (strcmp(cmd, "je") == 0) ||
+       (strcmp(cmd, "jne") == 0) || (strcmp(cmd, "call") == 0))
+    {
+        ++(*position);
+        return;
+    }
+    
 }
 
 //=========================================================================

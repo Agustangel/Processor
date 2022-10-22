@@ -30,15 +30,15 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int lhs = 0;
     int rhs = 0;
     
-    int ret = check_signature(code);
-    HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
+    // int ret = check_signature(code);
+    // HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
 
-    ip += LEN_SIGNATURE;
+    //ip += LEN_SIGNATURE;
     int arg = 0;
     while(ip < count)
     {
-        //printf("code[%d] = %d\n", ip - LEN_SIGNATURE, code[ip] & CMD_MASK_2);
-        //cpu_dump(code, count);
+        printf("code[%d] = %d\n", ip, code[ip] & CMD_MASK_2);
+        
         switch (code[ip] & CMD_MASK_2)
         {
         case CMD_PUSH:
@@ -46,16 +46,25 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
             stack_push(stack, arg);
             ++ip;
             break;
-
+        //TODO pop in RAM
         case CMD_POP:
-            Regs[eval(code, &ip, Regs, RAM) - 1].value = stack_pop(stack);
-            ++ip;
-            break;
+            if(code[ip] & ARG_RAM)
+            {
+                RAM[eval(code, &ip, Regs, RAM)] = stack_pop(stack);
+                ++ip;
+                break;
+            }
+            else if(code[ip] & ARG_REG)
+            {
+                Regs[eval(code, &ip, Regs, RAM) - 1].value = stack_pop(stack);
+                ++ip;
+                break;
+            }
 
         case CMD_ADD:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -67,7 +76,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
         case CMD_SUB:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -79,7 +88,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
         case CMD_MUL:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -91,7 +100,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
         case CMD_DIV:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -111,7 +120,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
         case CMD_OUT:
             if(stack->count < 1)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);  
             }
 
@@ -123,7 +132,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
         case CMD_DUP:
             if(stack->count < 1)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);  
             }
             out = stack_pop(stack);
@@ -135,24 +144,25 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
         case CMD_IN:
             arg = eval(code, &ip, Regs, RAM);
             stack_push(stack, arg);
+            ++ip;
             break;
 
         case CMD_CALL:
-            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1; // transition cell number, taking into account the signature           
+            ip = eval(code, &ip, Regs, RAM); // transition cell number, taking into account the signature           
             break;
 
         case CMD_RET:
-            ip = Regs[REG_RAX].value - 1; // The register contains the line number. We go to the team number
+            ip = Regs[REG_RAX - 1].value - 1; // The register contains the line number. We go to the team number
             break;
 
         case CMD_JMP:
-            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1; // transition cell number, taking into account the signature
+            ip = eval(code, &ip, Regs, RAM); // transition cell number, taking into account the signature
             break;
 
         case CMD_JB:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -161,14 +171,16 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs < rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
+                ip = eval(code, &ip, Regs, RAM);
+                break;              
             }
+            ip += 2;
             break;
 
         case CMD_JBE:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -177,14 +189,16 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs <= rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
+                ip = eval(code, &ip, Regs, RAM);
+                break;           
             }
+            ip += 2;
             break;
 
         case CMD_JA:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -193,14 +207,16 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs > rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
+                ip = eval(code, &ip, Regs, RAM);
+                break;         
             }
+            ip += 2;
             break;
 
         case CMD_JAE:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -209,14 +225,16 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs >= rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
+                ip = eval(code, &ip, Regs, RAM);
+                break;          
             }
+            ip += 2;
             break;
 
         case CMD_JE:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -225,14 +243,15 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs == rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
+                ip = eval(code, &ip, Regs, RAM);                
             }
+            ip += 2;
             break;
 
         case CMD_JNE:
             if(stack->count < 2)
             {
-                printf("ERROR: impossible operation.\n");
+                printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
 
@@ -241,8 +260,9 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs < rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE - 1;                
+                ip = eval(code, &ip, Regs, RAM);                
             }
+            ip += 2;
             break;
 
         case CMD_HLT:
@@ -325,15 +345,18 @@ int eval(char* code, int* ip, regs_t* Regs, char* RAM)
             if(cmd & ARG_REG)
             {
                 ++(*ip);
+                arg += Regs[code[*ip] - 1].value;
             }
+            return arg;
         }
         if(cmd & ARG_REG)
         {
-            arg += Regs[code[*ip] - 1].value;
-        }
-        if(cmd & ARG_RAM)
-        {
-            arg = RAM[arg];
+            arg += code[*ip]; // number of register
+            if(cmd & ARG_RAM)
+            {
+                arg = Regs[arg - 1].value;
+                return arg;
+            }  
         }
     }
 
