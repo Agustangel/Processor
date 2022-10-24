@@ -43,12 +43,15 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
 
     memcpy(code, &CP, sizeof(CP));
     ip += LEN_SIGNATURE;
-
+    
+    // for(int idx = 0; idx < *number_labels; ++idx)
+    // {
+    //     printf("label.name[%d] = %s, value = %d\n", idx, labels[idx].name, labels[idx].value);
+    // }
     for(int idx = 0; idx < number_strings; ++idx)
     {
         sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //
 
-        //printf("%s\n", cmd);
         if(strcmp(cmd, "push") == 0)
         {
             code[ip] = CMD_PUSH;
@@ -74,6 +77,10 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
         else if(strcmp(cmd, "div") == 0)
         {
             code[ip++] = CMD_DIV;        
+        }
+        else if(strcmp(cmd, "sqrt") == 0)
+        {
+            code[ip++] = CMD_SQRT;
         }
         else if(strcmp(cmd, "in") == 0)
         {
@@ -135,7 +142,6 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
         else if(strcmp(cmd, "hlt") == 0)
         {
             code[ip++] = CMD_HLT;
-            break;
         }
         else
         {
@@ -153,7 +159,7 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
         printf("ERROR: bad file read.\n");
         exit(ERR_BAD_FILE);
     }
-    fwrite(code, sizeof(char), number_strings * 2, out);
+    int ret = fwrite(code, sizeof(char), number_strings * 2 + LEN_SIGNATURE, out);
     fclose(out);
 
     return 0;
@@ -177,7 +183,7 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
 
     if(strcmp(cmd, "push") == 0)
     {
-        if(sscanf(string.begin_string + n, "%d", &val))
+        if(sscanf(string.begin_string + n - 1, "%d", &val))
         {
             get_immed(val, code, ip);
             return;
@@ -443,6 +449,10 @@ int fill_label(struct string_t string, label_t* labels, int* count_label, int* p
     {
         ++(*position);
     }
+    else if(strcmp(cmd, "sqrt") == 0)
+    {
+        ++(*position);
+    }
     else if(strcmp(cmd, "in") == 0)
     {
         ++(*position);
@@ -675,7 +685,7 @@ int main()
     logger_init(1, "asm.log");
     logger_set_level(INFO);
 
-    FILE* text = open_file("initial.s");
+    FILE* text = open_file("quadratic_equation.s");
     if (text == NULL)
     {
         printf("ERROR: bad file read.\n");
@@ -696,6 +706,7 @@ int main()
 
     int number_labels = count_labels(strings, number_strings);
     label_t* labels = (label_t*) calloc(number_labels, sizeof(label_t));
+
 
     int fill_labels = 0; 
     compile(strings, number_strings, labels, &number_labels, fill_labels); // the first compile

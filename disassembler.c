@@ -76,6 +76,11 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
             ++ip;
             break;
 
+        case CMD_SQRT:
+            fprintf(out, "sqrt\n");
+            ++ip;
+            break;
+                        
         case CMD_IN:
             fprintf(out, "in ");
             dis_eval(out, code, &ip);

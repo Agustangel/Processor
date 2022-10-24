@@ -37,7 +37,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int arg = 0;
     while(ip < count)
     {
-        printf("code[%d] = %d\n", ip, code[ip] & CMD_MASK_2);
+        printf("code[%d] = %d\n", ip - LEN_SIGNATURE, code[ip] & CMD_MASK_2);
         
         switch (code[ip] & CMD_MASK_2)
         {
@@ -80,7 +80,9 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
                 exit(ERR_BAD_OPER);
             }
 
-            subtraction = -(stack_pop(stack) - stack_pop(stack));
+            rhs = stack_pop(stack);
+            lhs = stack_pop(stack);
+            subtraction = lhs - rhs;
             stack_push(stack, subtraction);
             ++ip;
             break;
@@ -92,7 +94,12 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
                 exit(ERR_BAD_OPER);
             }
 
+            stack_dump(stack);
+            printf("pop 1 %d\n", stack_pop(stack));
+            
+            printf("pop 2 %d\n", stack_pop(stack));
             multiplication = stack_pop(stack) * stack_pop(stack);
+            printf("mul: %d\n", multiplication);
             stack_push(stack, multiplication);
             ++ip;
             break;
@@ -114,6 +121,19 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             division = lhs / rhs;
             stack_push(stack, division); 
+            ++ip;
+            break;
+
+        case CMD_SQRT:
+            if(stack->count < 1)
+            {
+                printf("ERROR: empty stack.\n");
+                exit(ERR_BAD_OPER);  
+            }
+
+            out = stack_pop(stack);
+            out = sqrt(out);   
+            stack_push(stack, out);
             ++ip;
             break;
 
@@ -243,7 +263,8 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs == rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;
+                break;             
             }
             ip += 2;
             break;
@@ -258,9 +279,10 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
             rhs = stack_pop(stack);
             lhs = stack_pop(stack);
 
-            if(lhs < rhs)
+            if(lhs != rhs)
             {
-                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;
+                break;               
             }
             ip += 2;
             break;

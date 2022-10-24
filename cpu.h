@@ -36,7 +36,8 @@ enum commands
     CMD_JNE   = 16,
     CMD_CALL  = 17,
     CMD_RET   = 18,
-    CMD_IN    = 19
+    CMD_IN    = 19,
+    CMD_SQRT  = 20
 };
 
 enum regs
