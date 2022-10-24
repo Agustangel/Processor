@@ -30,10 +30,10 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int lhs = 0;
     int rhs = 0;
     
-    // int ret = check_signature(code);
-    // HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
+    int ret = check_signature(code);
+    HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
 
-    //ip += LEN_SIGNATURE;
+    ip += LEN_SIGNATURE;
     int arg = 0;
     while(ip < count)
     {
@@ -46,7 +46,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
             stack_push(stack, arg);
             ++ip;
             break;
-        //TODO pop in RAM
+
         case CMD_POP:
             if(code[ip] & ARG_RAM)
             {
@@ -148,15 +148,15 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
             break;
 
         case CMD_CALL:
-            ip = eval(code, &ip, Regs, RAM); // transition cell number, taking into account the signature           
+            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE; // transition cell number, taking into account the signature           
             break;
 
         case CMD_RET:
-            ip = Regs[REG_RAX - 1].value - 1; // The register contains the line number. We go to the team number
+            ip = Regs[REG_RAX - 1].value + LEN_SIGNATURE - 1; // The register contains the line number. We go to the team number
             break;
 
         case CMD_JMP:
-            ip = eval(code, &ip, Regs, RAM); // transition cell number, taking into account the signature
+            ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE; // transition cell number, taking into account the signature
             break;
 
         case CMD_JB:
@@ -171,7 +171,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs < rhs)
             {
-                ip = eval(code, &ip, Regs, RAM);
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;
                 break;              
             }
             ip += 2;
@@ -189,7 +189,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs <= rhs)
             {
-                ip = eval(code, &ip, Regs, RAM);
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;
                 break;           
             }
             ip += 2;
@@ -207,7 +207,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs > rhs)
             {
-                ip = eval(code, &ip, Regs, RAM);
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;
                 break;         
             }
             ip += 2;
@@ -225,7 +225,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs >= rhs)
             {
-                ip = eval(code, &ip, Regs, RAM);
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;
                 break;          
             }
             ip += 2;
@@ -243,7 +243,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs == rhs)
             {
-                ip = eval(code, &ip, Regs, RAM);                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
             }
             ip += 2;
             break;
@@ -260,7 +260,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
             if(lhs < rhs)
             {
-                ip = eval(code, &ip, Regs, RAM);                
+                ip = eval(code, &ip, Regs, RAM) + LEN_SIGNATURE;                
             }
             ip += 2;
             break;
@@ -484,7 +484,7 @@ int main()
     stack_t stack;
     int init_size = 10;
     stack_init(&stack, init_size); 
-    
+
     FILE* binary_file = fopen("binary.out", "r");
     if (binary_file == NULL)
     {

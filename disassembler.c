@@ -26,21 +26,20 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
     int count_labels = *real_count_labels;
 
     int ip = LEN_SIGNATURE;
-    int position = 0; // line where label locates
+    int position = 0; // cell where label locates
 
     while(ip < count)
     {
-        ++position;
-
         if((code[ip] & CMD_MASK_2) == CMD_HLT)
         {
             fprintf(out, "hlt\n");
             break;
         }
         
+        position = ip - LEN_SIGNATURE + 1;
         if(dasm_label_exist(pos_labels, count_labels, position))
         {
-            fprintf(out, "l_%d\n", position);
+            fprintf(out, "l_%d:\n", position);
         }
 
         switch (code[ip] & CMD_MASK_2)
@@ -78,7 +77,8 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
             break;
 
         case CMD_IN:
-            fprintf(out, "in\n");
+            fprintf(out, "in ");
+            dis_eval(out, code, &ip);
             ++ip;
             break;
 
@@ -100,37 +100,37 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
             break;
 
         case CMD_JB:
-            fprintf(out, "jmp jb_l_");
+            fprintf(out, "jb l_");
             dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_JBE:
-            fprintf(out, "jmp jbe_l_");
+            fprintf(out, "jbe l_");
             dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_JA:
-            fprintf(out, "jmp ja_l_");
+            fprintf(out, "ja l_");
             dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_JAE:
-            fprintf(out, "jmp jae_l_");
+            fprintf(out, "jae l_");
             dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_JE:
-            fprintf(out, "jmp je_l_");
+            fprintf(out, "je l_");
             dis_eval(out, code, &ip);
             ++ip;
             break;
 
         case CMD_JNE:
-            fprintf(out, "jmp jne_l_");
+            fprintf(out, "jne l_");
             dis_eval(out, code, &ip);
             ++ip;
             break;
@@ -179,7 +179,6 @@ void dis_eval(FILE* out, char* code, int* ip)
                     fprintf_reg(out, code, ip);
                     fprintf(out, "]\n");
                 }
-
                 return;                
             }
         }
@@ -187,7 +186,6 @@ void dis_eval(FILE* out, char* code, int* ip)
         {
             ++(*ip);
             fprintf(out, "%d\n", code[*ip]);
-
             return;
         }
         if(cmd & ARG_REG)
@@ -195,11 +193,10 @@ void dis_eval(FILE* out, char* code, int* ip)
             ++(*ip);
             fprintf_reg(out, code, ip);
             fprintf(out, "\n");
-
             return;
         }
     }
-    else if((cmd & CMD_MASK_2) == CMD_POP)
+    if((cmd & CMD_MASK_2) == CMD_POP)
     {
         if(cmd & ARG_RAM)
         {
@@ -214,7 +211,6 @@ void dis_eval(FILE* out, char* code, int* ip)
                     fprintf_reg(out, code, ip);
                     fprintf(out, "]\n");
                 }
-
                 return;                
             }
         }
@@ -223,16 +219,20 @@ void dis_eval(FILE* out, char* code, int* ip)
             ++(*ip);
             fprintf_reg(out, code, ip);
             fprintf(out, "\n");
-
             return;
         }
     }
-    else if((cmd == CMD_JMP) || (cmd == CMD_JB) || (cmd == CMD_JBE) || (cmd == CMD_JA) ||
-            (cmd == CMD_JAE) || (cmd == CMD_JE) || (cmd == CMD_JNE) || (cmd == CMD_CALL))
+    if((cmd == CMD_JMP) || (cmd == CMD_JB) || (cmd == CMD_JBE) || (cmd == CMD_JA) ||
+       (cmd == CMD_JAE) || (cmd == CMD_JE) || (cmd == CMD_JNE) || (cmd == CMD_CALL))
+    {
+        ++(*ip);
+        fprintf(out, "%d:\n", code[*ip] + 1);
+        return;
+    }
+    if(cmd == CMD_IN)
     {
         ++(*ip);
         fprintf(out, "%d\n", code[*ip]);
-
         return;
     }
 
@@ -273,9 +273,12 @@ void fprintf_reg(FILE* out, char* code, int* ip)
 int dasm_count_labels(char* code, int count)
 {
     int count_labels = 0;
+    char cmd = 0;
     for(int idx = 0; idx < count; ++idx)
     {
-        if((code[idx] & CMD_MASK_2) == CMD_JMP)
+        cmd = code[idx] & CMD_MASK_2;
+        if((cmd == CMD_JMP) || (cmd == CMD_JB) || (cmd == CMD_JBE) || (cmd == CMD_JA) ||
+           (cmd == CMD_JAE) || (cmd == CMD_JE) || (cmd == CMD_JNE) || (cmd == CMD_CALL))
         {
             ++count_labels;
         }
@@ -315,7 +318,6 @@ void skip_arg(char* code, int* ip)
             return;
         }
     }
-
     if((cmd & CMD_MASK_2) == CMD_POP)
     {
         if(cmd & ARG_RAM)
@@ -335,6 +337,11 @@ void skip_arg(char* code, int* ip)
             ++(*ip);
             return;
         }
+    }
+    if((cmd & CMD_MASK_2) == CMD_IN)
+    {
+        ++(*ip);
+        return;
     }
 }
 
@@ -380,11 +387,28 @@ void fill_pos_labels(char* code, int count, int* pos_labels, int* real_count_lab
             ++ip;
             break;
 
-        case CMD_JMP:
+        case CMD_IN:
+            skip_arg(code, &ip);
             ++ip;
-            pos_labels[idx] = code[ip];
+            break;
+
+        case CMD_CALL:
+        case CMD_JMP:
+        case CMD_JA:
+        case CMD_JAE:
+        case CMD_JB:
+        case CMD_JBE:
+        case CMD_JE:
+        case CMD_JNE:
+            ++ip;
+            pos_labels[idx] = code[ip] + 1;
+            ++ip;
             ++(*real_count_label);
             ++idx;
+            break;
+
+        case CMD_RET:
+            ++ip;
             break;
 
         case CMD_DUP:

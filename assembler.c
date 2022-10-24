@@ -41,8 +41,8 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
     int len_code = number_strings * 2 + LEN_SIGNATURE;
     char* code = (char*) calloc(len_code, sizeof(char));
 
-    // memcpy(code, &CP, sizeof(CP));
-    // ip += LEN_SIGNATURE;
+    memcpy(code, &CP, sizeof(CP));
+    ip += LEN_SIGNATURE;
 
     for(int idx = 0; idx < number_strings; ++idx)
     {
@@ -212,14 +212,10 @@ void get_args(struct string_t string, char* code, int* ip, label_t* labels, int 
                 
         for(int idx = 0; idx < number_labels; ++idx)
         {
-            //printf("labels[%d].name = %s\n", idx, labels[idx].name);
-            //printf("str = %s\n", str);
             if(strcmp(str, labels[idx].name) == 0)
             {
                 val = labels[idx].value;
                 code[*ip] = val;
-                // printf("code[*ip] = %d\n", code[*ip]);
-                //printf("*ip = %d\n", *ip);
                 ++(*ip);
             }
         }
@@ -273,25 +269,21 @@ void get_reg(char* str, char* code, int* ip)
     if(strcmp(str, "rax") == 0)
     {
         code[*ip] = REG_RAX;
-        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
     else if(strcmp(str, "rbx") == 0)
     {
         code[*ip] = REG_RBX;
-        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
     else if(strcmp(str, "rcx") == 0)
     {
         code[*ip] = REG_RCX;
-        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
     else if(strcmp(str, "rdx") == 0)
     {
         code[*ip] = REG_RDX;
-        //printf("code[%d] = %d\n", *ip, code[*ip]);
         ++(*ip);
     }
     else

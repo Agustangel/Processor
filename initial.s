@@ -1,16 +1,13 @@
 push 1
 pop rbx
 in
-pop rcx
-push rcx
-out
-push 0
+push 1
 pop rdx
 call FACTORIAL:
 FACTORIAL:
         push rdx
         push rcx
-        jae END:
+        ja END:
         push rdx
         push rbx
         mul
