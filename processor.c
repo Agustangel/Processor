@@ -21,14 +21,14 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
 
     int ip = 0;
 
-    int addition = 0;
-    int subtraction = 0;
-    int multiplication = 0;
-    int division = 0;
-    int out = 0;
+    char addition = 0;
+    char subtraction = 0;
+    char multiplication = 0;
+    char division = 0;
+    char out = 0;
 
-    int lhs = 0;
-    int rhs = 0;
+    char lhs = 0;
+    char rhs = 0;
     
     int ret = check_signature(code);
     HANDLE_ERROR(ret, ERR_BAD_SIGNATURE, "ERROR: incorrect signature.\n");
@@ -94,12 +94,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
                 exit(ERR_BAD_OPER);
             }
 
-            stack_dump(stack);
-            printf("pop 1 %d\n", stack_pop(stack));
-            
-            printf("pop 2 %d\n", stack_pop(stack));
             multiplication = stack_pop(stack) * stack_pop(stack);
-            printf("mul: %d\n", multiplication);
             stack_push(stack, multiplication);
             ++ip;
             break;
@@ -257,6 +252,7 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
                 printf("ERROR: empty stack.\n");
                 exit(ERR_BAD_OPER);
             }
+
 
             rhs = stack_pop(stack);
             lhs = stack_pop(stack);
@@ -507,6 +503,7 @@ int main()
     int init_size = 10;
     stack_init(&stack, init_size); 
 
+
     FILE* binary_file = fopen("binary.out", "r");
     if (binary_file == NULL)
     {
@@ -529,15 +526,13 @@ int main()
     char* RAM = (char*) malloc(RAM_SIZE * sizeof(char));
 
     run(&stack, code, count, Regs, RAM);
-    //cpu_dump(code, count);
-
-    stack_dump(&stack);
-    stack_destroy(&stack);
+    //cpu_dump(code, count
 
     free(Regs);
     free(code);
     free(RAM);
 
+    stack_destroy(&stack);
     logger_finalize(file);
 
     return 0;

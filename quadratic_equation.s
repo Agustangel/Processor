@@ -54,10 +54,6 @@ SolveSquareEquation:
         push -1
         push rcx
         mul
-        out
-        hlt
-        out
-        hlt
         push 2
         push rbx
         mul
