@@ -1,6 +1,7 @@
 push 1
 pop rbx
 in
+pop rcx
 push 1
 pop rdx
 call FACTORIAL:

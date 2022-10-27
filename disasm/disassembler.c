@@ -29,13 +29,7 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
     int position = 0; // cell where label locates
 
     while(ip < count)
-    {
-        if((code[ip] & CMD_MASK_2) == CMD_HLT)
-        {
-            fprintf(out, "hlt\n");
-            break;
-        }
-        
+    {    
         position = ip - LEN_SIGNATURE + 1;
         if(dasm_label_exist(pos_labels, count_labels, position))
         {
@@ -94,7 +88,7 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
             break;
 
         case CMD_RET:
-            fprintf(out, "ret");
+            fprintf(out, "ret\n");
             ++ip;
             break;
 
@@ -150,9 +144,14 @@ int decompile(char* code, int count, int* pos_labels, int* real_count_labels, in
             ++ip;
             break;
 
+        case CMD_HLT:
+            fprintf(out, "hlt\n");
+            ++ip;
+            break;
+
         default:
-            printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-            exit(ERR_UNKNOWN_OPER);
+            ++ip;
+            break;
         }
     }
     fclose(out);
@@ -359,11 +358,6 @@ void fill_pos_labels(char* code, int count, int* pos_labels, int* real_count_lab
 
     while(ip < count)
     {
-        if((code[ip] & CMD_MASK_2) == CMD_HLT)
-        {
-            break;
-        }
-
         switch (code[ip] & CMD_MASK_2)
         {
         case CMD_PUSH:
@@ -389,6 +383,10 @@ void fill_pos_labels(char* code, int count, int* pos_labels, int* real_count_lab
             break;
 
         case CMD_DIV:
+            ++ip;
+            break;
+
+        case CMD_HLT:
             ++ip;
             break;
 
@@ -425,8 +423,8 @@ void fill_pos_labels(char* code, int count, int* pos_labels, int* real_count_lab
             break;
 
         default:
-            printf("LINE %d ERROR: unknown operator.\n", __LINE__);
-            exit(ERR_UNKNOWN_OPER);
+            ++ip;
+            break;
         }
     }    
 }

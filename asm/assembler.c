@@ -44,10 +44,6 @@ int compile(struct string_t* strings, int number_strings, label_t* labels, int* 
     memcpy(code, &CP, sizeof(CP));
     ip += LEN_SIGNATURE;
     
-    // for(int idx = 0; idx < *number_labels; ++idx)
-    // {
-    //     printf("label.name[%d] = %s, value = %d\n", idx, labels[idx].name, labels[idx].value);
-    // }
     for(int idx = 0; idx < number_strings; ++idx)
     {
         sscanf(strings[idx].begin_string, "%s%n", cmd, &count); //

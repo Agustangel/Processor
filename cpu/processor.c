@@ -37,8 +37,6 @@ int run(stack_t* stack, char* code, int count, regs_t* Regs, char* RAM)
     int arg = 0;
     while(ip < count)
     {
-        printf("code[%d] = %d\n", ip - LEN_SIGNATURE, code[ip] & CMD_MASK_2);
-        
         switch (code[ip] & CMD_MASK_2)
         {
         case CMD_PUSH:
